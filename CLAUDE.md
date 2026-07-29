@@ -1,0 +1,55 @@
+# CAVA Morandé · Dashboard Email — contexto para Claude
+
+Eres Claude trabajando en el **dashboard de email marketing de CAVA Morandé**. Este archivo es tu handoff: léelo antes de tocar nada. Idioma: **español chileno profesional** (usar "tú", nunca formas argentinas).
+
+## Qué es
+Dashboard **Next.js 14 (App Router) + recharts** que lee la API de **Mailchimp** y separa dos mundos de segmentos de la audiencia "E-commerce":
+- 🔵 **Generales** = base histórica de Mailchimp.
+- 🍷 **Shopify** = tags `Shopify-*` y `Dormido-PorValidar-*` (bases que entregó el cliente).
+
+En **producción (Vercel, público):** https://cava-email-dashboard-ambargallardo-6984s-projects.vercel.app
+
+## Arquitectura
+- `lib/mailchimp.js` — capa de datos. Combina `/reports` (aperturas, clics, rebotes, bajas, ecommerce), `/campaigns` (segmento objetivo, asunto, remitente) y `/lists/{id}/segments`. `getDashboard()` está envuelto en `unstable_cache` (revalida cada 10 min; sirve copia guardada al instante). Las 4 llamadas van en paralelo; segmentos en una sola página (`count=1000`).
+- `app/api/dashboard/route.js` — expone `GET /api/dashboard` (`maxDuration = 60`).
+- `app/page.js` — toda la UI (client component). Tema vino (#17111a / burgundy #d6486e / gold). Logo en `public/logo-cava.png`.
+- `middleware.js` — protección HTTP Basic opcional (vacía = link abierto). Hoy el link es **público sin clave** por decisión de la clienta.
+
+## Clasificación General vs Shopify (lo central)
+Se marca como Shopify todo segmento cuyo nombre empieza por `Shopify-` o `Dormido-PorValidar`. Cada campaña se clasifica leyendo `recipients.segment_opts.conditions[].value` (ids de tag objetivo): si apunta a un id Shopify → **Shopify**; si no → **General**. Respaldo por `segment_text`.
+
+## ⚠️ Reglas duras (dashboards que ve el cliente)
+1. **Nunca mostrar cosas malas de parte nuestra (la agencia).** El resumen ejecutivo solo muestra logros. Los problemas estructurales (remitente @gmail, dominio `cavamorande.cl` sin autenticar) se muestran atribuidos a su causa externa / TI del cliente, como defensa — no como falla propia.
+2. **"Mejor campaña / más vendió" siempre del mes más reciente**, no de meses atrás.
+3. **Las recomendaciones siempre parten por la frecuencia** (máx ~2 correos/persona/semana, rotar segmentos, no quemar la base — cuenta penalizada).
+
+## 💰 Moneda (dato no obvio, ya resuelto)
+La tienda es **CLP**, pero `ecommerce.total_revenue` de `/reports` viene **÷100** (Mailchimp asume 2 decimales; el CLP no tiene). **CLP real = valor × 100** (`REVENUE_CLP_FACTOR=100`). Verificado contra el ticket medio real (~$13.770). Las ventas son **atribución de Mailchimp por campaña, NO ventas de la tienda** (la tienda tiene ~27.449 órdenes; al email se le atribuyen ~235 en 6 meses). Ojo: una misma orden puede sumar en >1 campaña (ventana de atribución).
+
+## Variables de entorno (ver `.env.example`)
+`MAILCHIMP_API_KEY` (termina en `-us21`) · `MAILCHIMP_DC=us21` · `MAILCHIMP_LIST_ID=c416420484` · `CAVA_SENDER` · `CAVA_DOMAIN_AUTHENTICATED` (poner `true` cuando el TI autentique el dominio) · `REVENUE_CLP_FACTOR=100` · `SINCE_MONTHS=6` · `DASHBOARD_CACHE_MS=600000` · `DASHBOARD_USER`/`DASHBOARD_PASSWORD` (vacío = abierto).
+
+En Vercel ya están cargadas en Production. Para verlas: `vercel env ls`.
+
+## Correr en local
+```bash
+npm install          # si ~/.npm da error de permisos: agregar  --cache ./.npmcache
+cp .env.example .env.local   # completar MAILCHIMP_API_KEY
+npm run dev          # http://localhost:3000
+```
+
+## Desplegar (Vercel, sin Git)
+Proyecto ya linkeado (`.vercel/project.json`, cuenta `ambargallardo-6984`).
+```bash
+npx vercel --prod --yes
+```
+Para cambiar una env var: `npx vercel env rm NOMBRE production` y luego `printf '%s' "valor" | npx vercel env add NOMBRE production`, después redeploy.
+
+## Pendientes / próximos pasos
+- Que el **TI del cliente autentique `cavamorande.cl`** (SPF/DKIM/DMARC) → cuando pase, poner `CAVA_DOMAIN_AUTHENTICATED=true`.
+- Irán entrando más campañas al **mundo Shopify** (los tags se crearon el 2026-07-29); hoy solo hay 2.
+- Posible: dominio propio para conectar la URL (`cava-email.copywriters.cl` o similar) y/o proteger con clave si la clienta cambia de opinión.
+
+## Fuentes de verdad
+- Estrategia, credenciales y bases: doc maestro `~/Downloads/CAVA_Bases_Segmentadas/CAVA_EMAIL_PROYECTO_COMPLETO.md`.
+- Reglas de asuntos (descuento al frente), anti-saturación y correo de reactivación (50% OFF, código `TEEXTRAÑAMOS50`): mismo doc.
