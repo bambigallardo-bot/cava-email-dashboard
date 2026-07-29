@@ -19,9 +19,16 @@ En **producción (Vercel, público):** https://cava-email-dashboard-ambargallard
 Se marca como Shopify todo segmento cuyo nombre empieza por `Shopify-` o `Dormido-PorValidar`. Cada campaña se clasifica leyendo `recipients.segment_opts.conditions[].value` (ids de tag objetivo): si apunta a un id Shopify → **Shopify**; si no → **General**. Respaldo por `segment_text`.
 
 ## ⚠️ Reglas duras (dashboards que ve el cliente)
-1. **Nunca mostrar cosas malas de parte nuestra (la agencia).** El resumen ejecutivo solo muestra logros. Los problemas estructurales (remitente @gmail, dominio `cavamorande.cl` sin autenticar) se muestran atribuidos a su causa externa / TI del cliente, como defensa — no como falla propia.
+1. **Nunca mostrar cosas malas de parte nuestra (la agencia).** El resumen ejecutivo solo muestra logros. Los problemas estructurales (remitente @gmail, dominio `cavamorande.cl` sin autenticar) NO van arriba: se muestran **al final**, en "💡 Sugerencias importantes · para revisión del cliente", en tono de sugerencia (no alarmista) y atribuidos al TI del cliente.
 2. **"Mejor campaña / más vendió" siempre del mes más reciente**, no de meses atrás.
 3. **Las recomendaciones siempre parten por la frecuencia** (máx ~2 correos/persona/semana, rotar segmentos, no quemar la base — cuenta penalizada).
+4. **El informe parte con métricas/alcances** (Estado de la audiencia), no con problemas. Métricas con período de medición explícito (bajas = eventos del período; altas = captación vía pop-up 45% 1ª compra).
+
+## Orden de secciones (feedback KAM Vale)
+Audiencia (métricas) → Resumen ejecutivo (logros) → General vs Shopify → Segmentos → Evolución → Tandas → Ventas (CLP) → Campañas (fichas expandibles con chevron ›) → **Automatizaciones implementadas** (checklist de Customer Journeys en vivo) → Recomendaciones → Sugerencias · revisión del cliente (ex-entregabilidad, al fondo).
+
+## Automatizaciones
+Se leen en vivo de `/customer-journeys/journeys`. Hoy 6: Recuperar clientes perdidos, Recupera carritos abandonados, Bienvenida nuevos, Recompra 70d [agente], Segunda compra [agente] (activas) + Post-no-compra (pausada). ✅ = activa, ⏸️ = en pausa.
 
 ## 💰 Moneda (dato no obvio, ya resuelto)
 La tienda es **CLP**, pero `ecommerce.total_revenue` de `/reports` viene **÷100** (Mailchimp asume 2 decimales; el CLP no tiene). **CLP real = valor × 100** (`REVENUE_CLP_FACTOR=100`). Verificado contra el ticket medio real (~$13.770). Las ventas son **atribución de Mailchimp por campaña, NO ventas de la tienda** (la tienda tiene ~27.449 órdenes; al email se le atribuyen ~235 en 6 meses). Ojo: una misma orden puede sumar en >1 campaña (ventana de atribución).
