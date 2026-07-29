@@ -248,38 +248,6 @@ function buildInsights(data) {
   return out;
 }
 
-// ---- Recomendaciones (constructivas; SIEMPRE parten por frecuencia) ----
-function buildRecommendations(data) {
-  const out = [];
-  const camps = (data?.campaigns || []).filter((c) => c.sent >= 1);
-
-  // Frecuencia — siempre presente.
-  let freqTail = "Mantén un máximo de ~2 correos por persona a la semana y rota entre segmentos para no quemar la base (cuenta sensible por entregabilidad).";
-  let freqTone = "info";
-  let freqHead = "";
-  if (camps.length) {
-    const latest = camps.map((c) => +new Date(c.date)).sort((a, b) => b - a)[0];
-    const weekAgo = latest - 7 * 864e5;
-    const last7 = camps.filter((c) => +new Date(c.date) >= weekAgo).length;
-    freqHead = `En los últimos 7 días salieron ${last7} ${last7 === 1 ? "envío" : "envíos"}. `;
-    if (last7 >= 5) freqTone = "warn";
-  }
-  out.push({ emoji: "⏱️", tone: freqTone, title: "Cuida la frecuencia", text: freqHead + freqTail });
-
-  // Reactivación en tandas.
-  out.push({ emoji: "🔁", tone: "info", title: "Reactivación en tandas", text: "Sigue el «Te extrañamos» a dormidos/reactivados en tandas y frena una tanda si su rebote supera ~2–3%." });
-
-  // Duplicar grilla a Shopify si rinde.
-  const ts = data?.totals?.shopify, tg = data?.totals?.general;
-  if (ts && tg && ts.campaigns > 0 && ts.openRate >= tg.openRate) {
-    out.push({ emoji: "🍷", tone: "good", title: "Duplica la grilla a Shopify", text: "La versión a Shopify-Activo-Regular rinde igual o mejor que la base general. Mantén la grilla duplicada (normal + agresiva) sin que nadie reciba dos." });
-  }
-
-  // Asunto: oferta al frente.
-  out.push({ emoji: "✍️", tone: "info", title: "Asunto: oferta al frente", text: "Pon el % de descuento al inicio del asunto (en móvil se corta ~30 caracteres); la medalla o el puntaje van después." });
-  return out;
-}
-
 // ---- Segmentos ----
 function SegmentBar({ name, count, max, color }) {
   const w = Math.max((count / (max || 1)) * 100, 1.5);
@@ -332,7 +300,6 @@ export default function Page() {
   const automations = data?.automations || [];
   const popup = data?.popup;
   const insights = useMemo(() => (data ? buildInsights(data) : []), [data]);
-  const recommendations = useMemo(() => (data ? buildRecommendations(data) : []), [data]);
 
   const allCamps = data?.campaigns || [];
   const worldCamps = useMemo(
@@ -635,13 +602,6 @@ export default function Page() {
             ))}
           </div>
           {data?.errors?.automations && <div style={{ color: C.faint, fontSize: 12, marginTop: 8 }}>No se pudo cargar el detalle de automatizaciones.</div>}
-        </Section>
-      )}
-
-      {/* RECOMENDACIONES */}
-      {recommendations.length > 0 && (
-        <Section title="🧭 Recomendaciones" subtitle="Próximos pasos — partiendo siempre por cuidar la frecuencia.">
-          <div style={grid(300)}>{recommendations.map((it, i) => <Insight key={i} {...it} />)}</div>
         </Section>
       )}
 
