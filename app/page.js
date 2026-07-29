@@ -330,6 +330,7 @@ export default function Page() {
   const totals = data?.totals;
   const sm = data?.sinceMonths;
   const automations = data?.automations || [];
+  const popup = data?.popup;
   const insights = useMemo(() => (data ? buildInsights(data) : []), [data]);
   const recommendations = useMemo(() => (data ? buildRecommendations(data) : []), [data]);
 
@@ -422,6 +423,19 @@ export default function Page() {
           <Card label="Apertura prom. (cuenta)" value={fmtPct(acc?.openRate)} accent={C.green} />
           <Card label="Clic prom. (cuenta)" value={fmtPct(acc?.clickRate)} sub="referencia 2–3%" />
         </div>
+        {popup && (popup.captados > 0 || popup.welcomeStarted > 0) && (
+          <div style={{ ...panel, marginTop: 12, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "12px 16px", borderLeft: `3px solid ${C.gold}` }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.gold }}>📣 Pop-up 45% (1ª compra)</span>
+            <span style={{ fontSize: 13, color: C.muted }}>
+              <b style={{ color: C.text }}>{fmt(popup.captados)}</b> suscriptores captados
+            </span>
+            {popup.welcomeStarted > 0 && (
+              <span style={{ fontSize: 13, color: C.muted }}>
+                · alimenta el flujo de Bienvenida (<b style={{ color: C.text }}>{fmt(popup.welcomeStarted)}</b> ingresados{popup.welcomeActive ? ", activo ✅" : ""})
+              </span>
+            )}
+          </div>
+        )}
       </Section>
 
       {/* RESUMEN EJECUTIVO */}
