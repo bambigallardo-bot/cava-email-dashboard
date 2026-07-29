@@ -145,7 +145,7 @@ function CampaignCard({ c }) {
     { label: "Órdenes", value: c.orders },
   ];
   return (
-    <details style={{ ...panel, padding: 0 }}>
+    <details className="cavaCard" style={{ ...panel, padding: 0 }}>
       <summary style={{ listStyle: "none", cursor: "pointer", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <WorldBadge world={c.world} />
@@ -155,6 +155,7 @@ function CampaignCard({ c }) {
           {c.orders > 0 && <span style={{ color: C.gold, fontSize: 12 }}>🛒 {fmt(c.orders)}</span>}
           <span style={{ color: C.muted, fontSize: 12 }}>{shortDate(c.date)}</span>
           <span style={{ background: C.inner, color: C.green, fontWeight: 700, padding: "4px 10px", borderRadius: 20, fontSize: 13 }}>{fmtPct(c.openRate)}</span>
+          <span className="chev" style={{ color: C.wine, fontSize: 16, lineHeight: 1, display: "inline-block" }}>›</span>
         </span>
       </summary>
       <div style={{ padding: "0 16px 16px" }}>
@@ -327,6 +328,8 @@ export default function Page() {
   const del = data?.deliverability;
   const segs = data?.segments;
   const totals = data?.totals;
+  const sm = data?.sinceMonths;
+  const automations = data?.automations || [];
   const insights = useMemo(() => (data ? buildInsights(data) : []), [data]);
   const recommendations = useMemo(() => (data ? buildRecommendations(data) : []), [data]);
 
@@ -387,6 +390,13 @@ export default function Page() {
 
   return (
     <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 20px 80px" }}>
+      <style>{`
+        .cavaCard > summary::-webkit-details-marker { display: none; }
+        .cavaCard > summary { list-style: none; }
+        .cavaCard > summary .chev { transition: transform .2s ease; }
+        .cavaCard[open] > summary .chev { transform: rotate(90deg); }
+        .cavaCard > summary:hover .chev { opacity: .7; }
+      `}</style>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <img src="/logo-cava.png" alt="CAVA Morandé" style={{ height: 52, width: "auto" }} />
@@ -402,38 +412,15 @@ export default function Page() {
 
       {error && <div style={{ marginTop: 20, background: "#3b1620", border: "1px solid #6b2333", color: "#ffb4c0", padding: "12px 16px", borderRadius: 12 }}>{error}</div>}
 
-      {/* ENTREGABILIDAD / PENALIZACIÓN */}
-      {del && (
-        <Section title="🚦 Entregabilidad y penalización" subtitle="La causa de fondo del bajo rendimiento: entra a spam.">
-          <div style={grid(240)}>
-            <div style={{ ...panel, borderLeft: `3px solid ${del.senderIsGmail ? C.red : C.green}` }}>
-              <div style={{ fontSize: 12, color: C.muted }}>Remitente</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: del.senderIsGmail ? C.red : C.green }}>{del.sender}</div>
-              <div style={{ fontSize: 12, color: C.faint, marginTop: 4 }}>{del.senderIsGmail ? "⚠️ @gmail penaliza la entrega" : "Dominio propio"}</div>
-            </div>
-            <div style={{ ...panel, borderLeft: `3px solid ${del.domainAuthenticated ? C.green : C.red}` }}>
-              <div style={{ fontSize: 12, color: C.muted }}>Dominio autenticado (SPF/DKIM/DMARC)</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: del.domainAuthenticated ? C.green : C.red }}>{del.domainAuthenticated ? "Sí" : "No · cavamorande.cl"}</div>
-              <div style={{ fontSize: 12, color: C.faint, marginTop: 4 }}>{del.domainAuthenticated ? "OK" : "Pendiente: lo debe autenticar el TI del cliente"}</div>
-            </div>
-            <div style={{ ...panel, borderLeft: `3px solid ${(del.clickRate ?? 0) >= 2 ? C.green : C.red}` }}>
-              <div style={{ fontSize: 12, color: C.muted }}>Clic promedio de la cuenta</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: (del.clickRate ?? 0) >= 2 ? C.green : C.red }}>{fmtPct(del.clickRate)}</div>
-              <div style={{ fontSize: 12, color: C.faint, marginTop: 4 }}>Referencia 2–3% · {(del.clickRate ?? 0) >= 2 ? "en rango" : "techo por la entregabilidad (dominio)"}</div>
-            </div>
-          </div>
-        </Section>
-      )}
-
-      {/* RESUMEN DE CUENTA */}
-      <Section title="👥 Estado de la audiencia">
+      {/* MÉTRICAS DE LA AUDIENCIA — arranque del informe */}
+      <Section title="👥 Estado de la audiencia" subtitle={`Fotografía de la base y su rendimiento${sm ? ` · ventana de ${sm} meses` : ""}.`}>
         {data?.errors?.account && <div style={{ color: "#ffb4c0", fontSize: 13, marginBottom: 10 }}>{data.errors.account}</div>}
         <div style={grid(160)}>
-          <Card label="Suscritos" value={fmt(acc?.memberCount)} accent={C.purple} />
-          <Card label="Apertura promedio" value={fmtPct(acc?.openRate)} accent={C.green} />
-          <Card label="Clic promedio" value={fmtPct(acc?.clickRate)} accent={C.red} sub="ref. 2–3%" />
-          <Card label="Bajas totales" value={fmt(acc?.unsubscribeCount)} />
-          <Card label="Altas / mes" value={fmt(acc?.avgSub)} sub={`bajas/mes ${fmt(acc?.avgUnsub)}`} />
+          <Card label="Suscritos actuales" value={fmt(acc?.memberCount)} accent={C.purple} />
+          <Card label="Altas /mes (prom.)" value={fmt(acc?.avgSub)} accent={C.green} sub="captación vía pop-up 45% (1ª compra)" />
+          <Card label={`Bajas · últimos ${sm ?? 6} meses`} value={fmt(totals?.all?.unsubs)} sub="eventos de baja en el período" />
+          <Card label="Apertura prom. (cuenta)" value={fmtPct(acc?.openRate)} accent={C.green} />
+          <Card label="Clic prom. (cuenta)" value={fmtPct(acc?.clickRate)} sub="referencia 2–3%" />
         </div>
       </Section>
 
@@ -441,13 +428,6 @@ export default function Page() {
       {insights.length > 0 && (
         <Section title="🧠 Resumen ejecutivo">
           <div style={grid(300)}>{insights.map((it, i) => <Insight key={i} {...it} />)}</div>
-        </Section>
-      )}
-
-      {/* RECOMENDACIONES */}
-      {recommendations.length > 0 && (
-        <Section title="🧭 Recomendaciones" subtitle="Próximos pasos — partiendo siempre por cuidar la frecuencia.">
-          <div style={grid(300)}>{recommendations.map((it, i) => <Insight key={i} {...it} />)}</div>
         </Section>
       )}
 
@@ -621,6 +601,58 @@ export default function Page() {
           {fichas.length === 0 && <div style={{ color: C.muted, fontSize: 14 }}>Sin campañas para este filtro.</div>}
         </div>
       </Section>
+
+      {/* AUTOMATIZACIONES IMPLEMENTADAS (checklist) */}
+      {automations.length > 0 && (
+        <Section title="⚙️ Automatizaciones implementadas" subtitle="Flujos automáticos (Customer Journeys) que trabajan solos 24/7 en la cuenta.">
+          <div style={grid(300)}>
+            {automations.map((a) => (
+              <div key={a.id} style={{ ...panel, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{a.active ? "✅" : "⏸️"}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
+                    <span style={{ color: a.active ? C.green : C.gold }}>{a.active ? "Activa" : "En pausa"}</span>
+                    {a.started > 0 && <span> · {fmt(a.started)} contactos ingresados</span>}
+                    {a.inProgress > 0 && <span> · {fmt(a.inProgress)} en curso</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {data?.errors?.automations && <div style={{ color: C.faint, fontSize: 12, marginTop: 8 }}>No se pudo cargar el detalle de automatizaciones.</div>}
+        </Section>
+      )}
+
+      {/* RECOMENDACIONES */}
+      {recommendations.length > 0 && (
+        <Section title="🧭 Recomendaciones" subtitle="Próximos pasos — partiendo siempre por cuidar la frecuencia.">
+          <div style={grid(300)}>{recommendations.map((it, i) => <Insight key={i} {...it} />)}</div>
+        </Section>
+      )}
+
+      {/* SUGERENCIAS IMPORTANTES · REVISIÓN DEL CLIENTE (antes: entregabilidad) */}
+      {del && (
+        <Section title="💡 Sugerencias importantes · para revisión del cliente" subtitle="Puntos técnicos que dependen del cliente y que, al resolverse, destraban el rendimiento del email.">
+          <div style={grid(240)}>
+            <div style={{ ...panel, borderLeft: `3px solid ${del.senderIsGmail ? C.gold : C.green}` }}>
+              <div style={{ fontSize: 12, color: C.muted }}>Remitente</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{del.sender}</div>
+              <div style={{ fontSize: 12, color: C.faint, marginTop: 4 }}>{del.senderIsGmail ? "Sugerencia: migrar a un remitente con dominio propio mejora la entrega." : "Dominio propio ✓"}</div>
+            </div>
+            <div style={{ ...panel, borderLeft: `3px solid ${del.domainAuthenticated ? C.green : C.gold}` }}>
+              <div style={{ fontSize: 12, color: C.muted }}>Dominio autenticado (SPF/DKIM/DMARC)</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{del.domainAuthenticated ? "Sí" : "cavamorande.cl · pendiente"}</div>
+              <div style={{ fontSize: 12, color: C.faint, marginTop: 4 }}>{del.domainAuthenticated ? "OK" : "Lo autentica el TI del cliente; es lo que más sube la entregabilidad."}</div>
+            </div>
+            <div style={{ ...panel, borderLeft: `3px solid ${C.blue}` }}>
+              <div style={{ fontSize: 12, color: C.muted }}>Clic promedio de la cuenta</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{fmtPct(del.clickRate)}</div>
+              <div style={{ fontSize: 12, color: C.faint, marginTop: 4 }}>Referencia 2–3%. Sube al resolver los puntos de arriba.</div>
+            </div>
+          </div>
+        </Section>
+      )}
 
       <footer style={{ marginTop: 50, color: C.faint, fontSize: 12, textAlign: "center" }}>Datos vía API de Mailchimp (audiencia E-commerce) · CAVA Morandé</footer>
     </main>
