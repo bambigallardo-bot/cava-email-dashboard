@@ -130,7 +130,7 @@ function conclusion(c) {
   const p = [];
   p.push(`Enviada el ${fmtDate(c.date)} (${weekday(c.date)}, ${hourMin(c.date)}) al mundo ${c.world === "shopify" ? "Shopify" : "general"}${c.segmentNames.length ? ` (${c.segmentNames.join(", ")})` : ""}, con ${fmt(c.sent)} correos.`);
   p.push(`Apertura de ${c.openRate}% (${fmt(c.uniqueOpens)} únicas) y clic de ${c.clickRate}% (${fmt(c.uniqueClicks)}).`);
-  if (c.orders > 0) p.push(`Atribuyó ${fmt(c.orders)} ${c.orders === 1 ? "orden" : "órdenes"} de compra.`);
+  if (c.orders > 0) p.push(`Atribuyó ${fmt(c.orders)} ${c.orders === 1 ? "orden" : "órdenes"} de compra (${fmtClp(c.revenue)}).`);
   else p.push(`No registró órdenes atribuidas.`);
   if (c.bounces > 0) p.push(`Rebote ${c.bounceRate}% (${fmt(c.bounces)}).`);
   if (c.unsubs > 0) p.push(`${fmt(c.unsubs)} bajas.`);
@@ -175,6 +175,7 @@ function CampaignCard({ c }) {
           <Mini label="Apertura" value={fmtPct(c.openRate)} color={C.green} />
           <Mini label="Clic" value={fmtPct(c.clickRate)} color={C.blue} />
           <Mini label="Órdenes" value={fmt(c.orders)} color={C.gold} />
+          <Mini label="Ingresos (CLP)" value={fmtClp(c.revenue)} color={C.gold} />
           <Mini label="Rebote" value={fmtPct(c.bounceRate)} color={C.red} />
           <Mini label="Bajas" value={fmt(c.unsubs)} />
         </div>
