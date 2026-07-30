@@ -202,6 +202,7 @@ function WorldTotals({ label, color, t }) {
         <Mini label="Clic" value={fmtPct(t.clickRate)} color={C.blue} />
         <Mini label="Órdenes" value={fmt(t.orders)} color={C.gold} />
         <Mini label="Ingresos email (CLP)" value={fmtClp(t.revenue)} color={C.gold} />
+        <Mini label="Rebote" value={fmtPct(t.bounceRate)} />
         <Mini label="Bajas" value={fmt(t.unsubs)} />
       </div>
     </div>
@@ -390,6 +391,7 @@ export default function Page() {
           <Card label={`Bajas · últimos ${sm ?? 6} meses`} value={fmt(totals?.all?.unsubs)} sub="eventos de baja en el período" />
           <Card label="Apertura prom. (cuenta)" value={fmtPct(acc?.openRate)} accent={C.green} />
           <Card label="Clic prom. (cuenta)" value={fmtPct(acc?.clickRate)} sub="referencia 2–3%" />
+          <Card label={`Tasa de rebote · últimos ${sm ?? 6} meses`} value={fmtPct(totals?.all?.bounceRate)} sub="ideal < 2%" />
         </div>
         {popup && (popup.captados > 0 || popup.welcomeStarted > 0) && (
           <div style={{ ...panel, marginTop: 12, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "12px 16px", borderLeft: `3px solid ${C.gold}` }}>
