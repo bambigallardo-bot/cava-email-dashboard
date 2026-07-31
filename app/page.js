@@ -28,7 +28,7 @@ const BUCKET_COLOR = {
 
 // ---- Formatos (CL) ----
 const fmt = (n) => (typeof n === "number" ? n.toLocaleString("es-CL") : n ?? "—");
-const fmtUsd = (n) => (typeof n === "number" ? `US$${Math.round(n).toLocaleString("es-CL")}` : "—");
+const fmtClp = (n) => (typeof n === "number" ? `$${Math.round(n).toLocaleString("es-CL")}` : "—");
 const fmtPct = (n) => (typeof n === "number" ? `${n}%` : "—");
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 const shortDate = (d) => (d ? new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short" }) : "—");
@@ -130,7 +130,7 @@ function conclusion(c) {
   const p = [];
   p.push(`Enviada el ${fmtDate(c.date)} (${weekday(c.date)}, ${hourMin(c.date)}) al mundo ${c.world === "shopify" ? "Shopify" : "general"}${c.segmentNames.length ? ` (${c.segmentNames.join(", ")})` : ""}, con ${fmt(c.sent)} correos.`);
   p.push(`Apertura de ${c.openRate}% (${fmt(c.uniqueOpens)} únicas) y clic de ${c.clickRate}% (${fmt(c.uniqueClicks)}).`);
-  if (c.orders > 0) p.push(`Atribuyó ${fmt(c.orders)} ${c.orders === 1 ? "orden" : "órdenes"} de compra (${fmtUsd(c.revenue)}).`);
+  if (c.orders > 0) p.push(`Atribuyó ${fmt(c.orders)} ${c.orders === 1 ? "orden" : "órdenes"} de compra (${fmtClp(c.revenueClp)}).`);
   else p.push(`No registró órdenes atribuidas.`);
   if (c.bounces > 0) p.push(`Rebote ${c.bounceRate}% (${fmt(c.bounces)}).`);
   if (c.unsubs > 0) p.push(`${fmt(c.unsubs)} bajas.`);
@@ -175,7 +175,7 @@ function CampaignCard({ c }) {
           <Mini label="Apertura" value={fmtPct(c.openRate)} color={C.green} />
           <Mini label="Clic" value={fmtPct(c.clickRate)} color={C.blue} />
           <Mini label="Órdenes" value={fmt(c.orders)} color={C.gold} />
-          <Mini label="Ingresos (USD)" value={fmtUsd(c.revenue)} color={C.gold} />
+          <Mini label="Ingresos (CLP)" value={fmtClp(c.revenueClp)} color={C.gold} />
           <Mini label="Rebote" value={fmtPct(c.bounceRate)} color={C.red} />
           <Mini label="Bajas" value={fmt(c.unsubs)} />
         </div>
@@ -190,6 +190,24 @@ function CampaignCard({ c }) {
   );
 }
 
+// ---- Totales de un conjunto de campañas (para vista mensual, en cliente) ----
+function computeTotals(camps) {
+  const sum = (k) => camps.reduce((a, c) => a + (c[k] || 0), 0);
+  const r1 = (n) => Math.round(n * 10) / 10;
+  const sent = sum("sent");
+  const delivered = sent - sum("bounces");
+  const uOpens = sum("uniqueOpens");
+  const uClicks = sum("uniqueClicks");
+  return {
+    campaigns: camps.length, sent, delivered,
+    openRate: delivered ? r1((uOpens / delivered) * 100) : 0,
+    clickRate: delivered ? r1((uClicks / delivered) * 100) : 0,
+    bounces: sum("bounces"), bounceRate: sent ? r1((sum("bounces") / sent) * 100) : 0,
+    unsubs: sum("unsubs"), unsubRate: delivered ? r1((sum("unsubs") / delivered) * 100) : 0,
+    orders: sum("orders"), revenueClp: Math.round(sum("revenueClp")),
+  };
+}
+
 // ---- Comparativa: totales de un mundo ----
 function WorldTotals({ label, color, t }) {
   return (
@@ -201,7 +219,7 @@ function WorldTotals({ label, color, t }) {
         <Mini label="Apertura" value={fmtPct(t.openRate)} color={C.green} />
         <Mini label="Clic" value={fmtPct(t.clickRate)} color={C.blue} />
         <Mini label="Órdenes" value={fmt(t.orders)} color={C.gold} />
-        <Mini label="Ingresos email (USD)" value={fmtUsd(t.revenue)} color={C.gold} />
+        <Mini label="Ingresos email (CLP)" value={fmtClp(t.revenueClp)} color={C.gold} />
         <Mini label="Rebote" value={fmtPct(t.bounceRate)} />
         <Mini label="Bajas" value={fmt(t.unsubs)} />
         <Mini label="Desuscripción" value={fmtPct(t.unsubRate)} />
@@ -274,6 +292,7 @@ export default function Page() {
   const [world, setWorld] = useState("all"); // all | general | shopify
   const [search, setSearch] = useState("");
   const [showAllGeneral, setShowAllGeneral] = useState(false);
+  const [selMonth, setSelMonth] = useState(null); // mes seleccionado para las vistas mensuales
 
   const load = useCallback(async () => {
     try {
@@ -309,6 +328,27 @@ export default function Page() {
     () => allCamps.filter((c) => world === "all" || c.world === world),
     [allCamps, world]
   );
+
+  // Meses disponibles (más reciente primero) y mes por defecto = el último.
+  const monthOptions = useMemo(
+    () => [...new Set(allCamps.map((c) => monthKey(c.date)))].sort((a, b) => b.localeCompare(a)),
+    [allCamps]
+  );
+  useEffect(() => {
+    if (!selMonth && monthOptions.length) setSelMonth(monthOptions[0]);
+  }, [monthOptions, selMonth]);
+
+  // Totales MENSUALES (del mes seleccionado) — general, shopify y todo.
+  const mTotals = useMemo(() => {
+    const inMonth = allCamps.filter((c) => monthKey(c.date) === selMonth);
+    return {
+      general: computeTotals(inMonth.filter((c) => c.world === "general")),
+      shopify: computeTotals(inMonth.filter((c) => c.world === "shopify")),
+      all: computeTotals(inMonth),
+    };
+  }, [allCamps, selMonth]);
+  const monthName = selMonth ? monthLabel(selMonth) : "";
+  const fxRate = data?.fx?.usdClp || 950;
 
   const fichas = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -383,17 +423,28 @@ export default function Page() {
 
       {error && <div style={{ marginTop: 20, background: "#3b1620", border: "1px solid #6b2333", color: "#ffb4c0", padding: "12px 16px", borderRadius: 12 }}>{error}</div>}
 
-      {/* MÉTRICAS DE LA AUDIENCIA — arranque del informe */}
-      <Section title="👥 Estado de la audiencia" subtitle={`Fotografía de la base y su rendimiento${sm ? ` · ventana de ${sm} meses` : ""}.`}>
+      {/* SELECTOR DE MES — las métricas de resumen son MENSUALES */}
+      {monthOptions.length > 0 && (
+        <div style={{ ...panel, marginTop: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", borderLeft: `3px solid ${C.wine}` }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>📅 Mes del informe</span>
+          <select value={selMonth || ""} onChange={(e) => setSelMonth(e.target.value)} style={{ ...selStyle, fontSize: 14, fontWeight: 600 }}>
+            {monthOptions.map((k) => <option key={k} value={k}>{monthLabel(k)}</option>)}
+          </select>
+          <span style={{ fontSize: 12, color: C.faint }}>Los cuadros de resumen (audiencia, General vs Shopify, ventas) muestran solo este mes.</span>
+        </div>
+      )}
+
+      {/* MÉTRICAS DE LA AUDIENCIA — arranque del informe (mensual) */}
+      <Section title="👥 Estado de la audiencia" subtitle={`Base actual y rendimiento de ${monthName || "el mes"}.`}>
         {data?.errors?.account && <div style={{ color: "#ffb4c0", fontSize: 13, marginBottom: 10 }}>{data.errors.account}</div>}
         <div style={grid(160)}>
-          <Card label="Suscritos actuales" value={fmt(acc?.memberCount)} accent={C.purple} />
+          <Card label="Suscritos actuales" value={fmt(acc?.memberCount)} accent={C.purple} sub="total de la base hoy" />
           <Card label="Altas /mes (prom.)" value={fmt(acc?.avgSub)} accent={C.green} sub="captación vía pop-up 45% (1ª compra)" />
-          <Card label={`Bajas · últimos ${sm ?? 6} meses`} value={fmt(totals?.all?.unsubs)} sub="eventos de baja en el período" />
-          <Card label="Apertura prom. (cuenta)" value={fmtPct(acc?.openRate)} accent={C.green} />
-          <Card label="Clic prom. (cuenta)" value={fmtPct(acc?.clickRate)} sub="referencia 2–3%" />
-          <Card label={`Tasa de rebote · últimos ${sm ?? 6} meses`} value={fmtPct(totals?.all?.bounceRate)} sub="ideal < 2%" />
-          <Card label={`Tasa de desuscripción · últimos ${sm ?? 6} meses`} value={fmtPct(totals?.all?.unsubRate)} sub="ideal < 0,5%" />
+          <Card label={`Apertura · ${monthName}`} value={fmtPct(mTotals.all.openRate)} accent={C.green} />
+          <Card label={`Clic · ${monthName}`} value={fmtPct(mTotals.all.clickRate)} sub="referencia 2–3%" />
+          <Card label={`Bajas · ${monthName}`} value={fmt(mTotals.all.unsubs)} sub="eventos de baja del mes" />
+          <Card label={`Tasa de rebote · ${monthName}`} value={fmtPct(mTotals.all.bounceRate)} sub="ideal < 2%" />
+          <Card label={`Desuscripción · ${monthName}`} value={fmtPct(mTotals.all.unsubRate)} sub="ideal < 0,5%" />
         </div>
         {popup && (popup.captados > 0 || popup.welcomeStarted > 0) && (
           <div style={{ ...panel, marginTop: 12, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "12px 16px", borderLeft: `3px solid ${C.gold}` }}>
@@ -417,12 +468,12 @@ export default function Page() {
         </Section>
       )}
 
-      {/* VISTA DIVIDIDA: GENERAL vs SHOPIFY */}
+      {/* VISTA DIVIDIDA: GENERAL vs SHOPIFY (mensual) */}
       {totals && (
-        <Section title="⚖️ General vs Shopify" subtitle="Rendimiento comparado de los dos mundos de segmentos (según el período cargado).">
+        <Section title="⚖️ General vs Shopify" subtitle={`Rendimiento comparado de los dos mundos de segmentos · ${monthName}.`}>
           <div style={grid(320)}>
-            <WorldTotals label="🔵 Segmentos generales" color={C.blue} t={totals.general} />
-            <WorldTotals label="🍷 Segmentos Shopify" color={C.wine} t={totals.shopify} />
+            <WorldTotals label="🔵 Segmentos generales" color={C.blue} t={mTotals.general} />
+            <WorldTotals label="🍷 Segmentos Shopify" color={C.wine} t={mTotals.shopify} />
           </div>
         </Section>
       )}
@@ -548,16 +599,16 @@ export default function Page() {
         </Section>
       )}
 
-      {/* VENTAS */}
+      {/* VENTAS (mensual, CLP) */}
       {totals && (
-        <Section title="🛒 Ventas atribuidas a las campañas de email (USD)" subtitle="Solo compras que Mailchimp atribuye a los correos (gente que abrió/clickeó y luego compró). NO es el total de ventas de la tienda.">
+        <Section title="🛒 Ventas atribuidas a las campañas de email (CLP)" subtitle={`Compras que Mailchimp atribuye a los correos de ${monthName}. NO es el total de ventas de la tienda.`}>
           <div style={grid(200)}>
-            <Card label="Ingresos por email" value={fmtUsd(totals.all.revenue)} accent={C.gold} sub={`${fmt(totals.all.orders)} órdenes atribuidas`} />
-            <Card label="Ingresos · General" value={fmtUsd(totals.general.revenue)} accent={C.blue} sub={`${fmt(totals.general.orders)} órdenes`} />
-            <Card label="Ingresos · Shopify" value={fmtUsd(totals.shopify.revenue)} accent={C.wine} sub={`${fmt(totals.shopify.orders)} órdenes`} />
+            <Card label={`Ingresos por email · ${monthName}`} value={fmtClp(mTotals.all.revenueClp)} accent={C.gold} sub={`${fmt(mTotals.all.orders)} órdenes atribuidas`} />
+            <Card label="Ingresos · General" value={fmtClp(mTotals.general.revenueClp)} accent={C.blue} sub={`${fmt(mTotals.general.orders)} órdenes`} />
+            <Card label="Ingresos · Shopify" value={fmtClp(mTotals.shopify.revenueClp)} accent={C.wine} sub={`${fmt(mTotals.shopify.orders)} órdenes`} />
           </div>
           <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-            Fuente: campo <b>ecommerce.total_spent</b> de cada reporte de Mailchimp, en <b>USD</b> (así lo entrega la API, currency_code=USD). Es la venta que Mailchimp <b>atribuye</b> a los correos — su cobertura es parcial en esta cuenta y no captura toda la venta real. Lo ideal a futuro: cruzar la venta real desde GA4/Shopify vía UTM (utm_campaign). Ojo también: una misma orden puede sumar en más de una campaña.
+            Fuente: campo <b>ecommerce.total_spent</b> de Mailchimp (viene en USD), convertido a CLP a <b>1 USD = ${fmt(fxRate)}</b> (ajustable). Es la venta que Mailchimp <b>atribuye</b> a los correos — cobertura parcial en esta cuenta, no captura toda la venta real ni es el total de la tienda. A futuro conviene cruzarla con la venta real de GA4/Shopify vía UTM. Ojo: una misma orden puede sumar en más de una campaña.
           </div>
         </Section>
       )}
