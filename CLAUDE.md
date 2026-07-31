@@ -30,10 +30,14 @@ Audiencia (métricas) → Resumen ejecutivo (logros) → General vs Shopify → 
 ## Automatizaciones
 Se leen en vivo de `/customer-journeys/journeys`. Hoy 6: Recuperar clientes perdidos, Recupera carritos abandonados, Bienvenida nuevos, Recompra 70d [agente], Segunda compra [agente] (activas) + Post-no-compra (pausada). ✅ = activa, ⏸️ = en pausa.
 
-## 💰 Ingresos — MONEDA USD (corregido 2026-07-31)
-Los ingresos se toman del campo **`ecommerce.total_spent`** de cada `/reports/{id}`, y Mailchimp los entrega en **USD** (`currency_code=USD`). Se muestran **tal cual, SIN convertir**. (Una versión anterior usaba `total_revenue` × 100 y lo etiquetaba CLP — estaba MAL; se corrigió tras cruzar con la API: p. ej. Vitis Pinot Activo-Regular = total_spent 48,59 = US$49, no $4.481 CLP.)
-Las ventas son **atribución de Mailchimp por campaña** (parcial en esta cuenta, NO captura toda la venta; NO es el total de la tienda). Una misma orden puede sumar en >1 campaña. **Mejora futura:** cruzar venta real desde GA4/Shopify vía UTM (`utm_campaign=teextranamos`, etc.).
-Verificación de referencia (semana 24–31 jul 2026): Shopify US$396,60/6 · General US$474,90/5 · Total US$871,50/11.
+## 💰 Ingresos — fuente USD, se MUESTRA en CLP (2026-07-31)
+Fuente de verdad = campo **`ecommerce.total_spent`** de cada `/reports/{id}`, que Mailchimp entrega en **USD** (`currency_code=USD`). En la lib se guarda `revenue` (USD, para verificar contra la API) y `revenueClp` = USD × `USD_CLP_RATE` (env, default **950**). La UI muestra **CLP** (Vale pidió todo en CLP; el USD confundía). El tipo de cambio va anotado en chico en la sección de ventas y es ajustable.
+(Historia: una versión usó `total_revenue`×100 etiquetado CLP = MAL; luego USD directo; ahora USD→CLP con tasa real.)
+Las ventas son **atribución de Mailchimp por campaña** (parcial, NO captura toda la venta, NO es total de tienda). Una misma orden puede sumar en >1 campaña. **Mejora futura:** cruzar venta real desde GA4/Shopify vía UTM.
+Verificación (semana 24–31 jul 2026, en USD antes de convertir): Shopify US$396,60/6 · General US$474,90/5 · Total US$871,50/11.
+
+## 📅 Vista MENSUAL (2026-07-31)
+Vale pidió que los cuadros de resumen sean **mensuales**, no acumulado de 6 meses. Hay un **selector de mes** global (default = mes más reciente). Los totales de **Estado de la audiencia**, **General vs Shopify** y **Ventas** se calculan en el cliente (`computeTotals`) solo con las campañas del mes elegido. La lista de Campañas, Evolución, Tandas y Segmentos siguen mostrando todo el rango cargado (`SINCE_MONTHS=6`, meses completos).
 
 ## Variables de entorno (ver `.env.example`)
 `MAILCHIMP_API_KEY` (termina en `-us21`) · `MAILCHIMP_DC=us21` · `MAILCHIMP_LIST_ID=c416420484` · `CAVA_SENDER` · `CAVA_DOMAIN_AUTHENTICATED` (poner `true` cuando el TI autentique el dominio) · `REVENUE_CLP_FACTOR=100` · `SINCE_MONTHS=6` · `DASHBOARD_CACHE_MS=600000` · `DASHBOARD_USER`/`DASHBOARD_PASSWORD` (vacío = abierto).
