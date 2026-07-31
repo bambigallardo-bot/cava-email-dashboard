@@ -28,7 +28,7 @@ const BUCKET_COLOR = {
 
 // ---- Formatos (CL) ----
 const fmt = (n) => (typeof n === "number" ? n.toLocaleString("es-CL") : n ?? "—");
-const fmtClp = (n) => (typeof n === "number" ? `$${Math.round(n).toLocaleString("es-CL")}` : "—");
+const fmtUsd = (n) => (typeof n === "number" ? `US$${Math.round(n).toLocaleString("es-CL")}` : "—");
 const fmtPct = (n) => (typeof n === "number" ? `${n}%` : "—");
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 const shortDate = (d) => (d ? new Date(d).toLocaleDateString("es-CL", { day: "2-digit", month: "short" }) : "—");
@@ -130,7 +130,7 @@ function conclusion(c) {
   const p = [];
   p.push(`Enviada el ${fmtDate(c.date)} (${weekday(c.date)}, ${hourMin(c.date)}) al mundo ${c.world === "shopify" ? "Shopify" : "general"}${c.segmentNames.length ? ` (${c.segmentNames.join(", ")})` : ""}, con ${fmt(c.sent)} correos.`);
   p.push(`Apertura de ${c.openRate}% (${fmt(c.uniqueOpens)} únicas) y clic de ${c.clickRate}% (${fmt(c.uniqueClicks)}).`);
-  if (c.orders > 0) p.push(`Atribuyó ${fmt(c.orders)} ${c.orders === 1 ? "orden" : "órdenes"} de compra (${fmtClp(c.revenue)}).`);
+  if (c.orders > 0) p.push(`Atribuyó ${fmt(c.orders)} ${c.orders === 1 ? "orden" : "órdenes"} de compra (${fmtUsd(c.revenue)}).`);
   else p.push(`No registró órdenes atribuidas.`);
   if (c.bounces > 0) p.push(`Rebote ${c.bounceRate}% (${fmt(c.bounces)}).`);
   if (c.unsubs > 0) p.push(`${fmt(c.unsubs)} bajas.`);
@@ -175,7 +175,7 @@ function CampaignCard({ c }) {
           <Mini label="Apertura" value={fmtPct(c.openRate)} color={C.green} />
           <Mini label="Clic" value={fmtPct(c.clickRate)} color={C.blue} />
           <Mini label="Órdenes" value={fmt(c.orders)} color={C.gold} />
-          <Mini label="Ingresos (CLP)" value={fmtClp(c.revenue)} color={C.gold} />
+          <Mini label="Ingresos (USD)" value={fmtUsd(c.revenue)} color={C.gold} />
           <Mini label="Rebote" value={fmtPct(c.bounceRate)} color={C.red} />
           <Mini label="Bajas" value={fmt(c.unsubs)} />
         </div>
@@ -201,7 +201,7 @@ function WorldTotals({ label, color, t }) {
         <Mini label="Apertura" value={fmtPct(t.openRate)} color={C.green} />
         <Mini label="Clic" value={fmtPct(t.clickRate)} color={C.blue} />
         <Mini label="Órdenes" value={fmt(t.orders)} color={C.gold} />
-        <Mini label="Ingresos email (CLP)" value={fmtClp(t.revenue)} color={C.gold} />
+        <Mini label="Ingresos email (USD)" value={fmtUsd(t.revenue)} color={C.gold} />
         <Mini label="Rebote" value={fmtPct(t.bounceRate)} />
         <Mini label="Bajas" value={fmt(t.unsubs)} />
         <Mini label="Desuscripción" value={fmtPct(t.unsubRate)} />
@@ -550,14 +550,14 @@ export default function Page() {
 
       {/* VENTAS */}
       {totals && (
-        <Section title="🛒 Ventas atribuidas a las campañas de email (CLP)" subtitle="Solo compras que Mailchimp atribuye a los correos (gente que abrió/clickeó y luego compró). NO es el total de ventas de la tienda.">
+        <Section title="🛒 Ventas atribuidas a las campañas de email (USD)" subtitle="Solo compras que Mailchimp atribuye a los correos (gente que abrió/clickeó y luego compró). NO es el total de ventas de la tienda.">
           <div style={grid(200)}>
-            <Card label="Ingresos por email" value={fmtClp(totals.all.revenue)} accent={C.gold} sub={`${fmt(totals.all.orders)} órdenes atribuidas`} />
-            <Card label="Ingresos · General" value={fmtClp(totals.general.revenue)} accent={C.blue} sub={`${fmt(totals.general.orders)} órdenes`} />
-            <Card label="Ingresos · Shopify" value={fmtClp(totals.shopify.revenue)} accent={C.wine} sub={`${fmt(totals.shopify.orders)} órdenes`} />
+            <Card label="Ingresos por email" value={fmtUsd(totals.all.revenue)} accent={C.gold} sub={`${fmt(totals.all.orders)} órdenes atribuidas`} />
+            <Card label="Ingresos · General" value={fmtUsd(totals.general.revenue)} accent={C.blue} sub={`${fmt(totals.general.orders)} órdenes`} />
+            <Card label="Ingresos · Shopify" value={fmtUsd(totals.shopify.revenue)} accent={C.wine} sub={`${fmt(totals.shopify.orders)} órdenes`} />
           </div>
           <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-            Fuente: atribución de Mailchimp por campaña, en CLP (no es el total de la tienda). Ojo: si una persona recibió varios correos, la misma orden puede sumar en más de una campaña → el total es “ventas influidas por email”, no órdenes únicas. Factor de conversión ajustable con REVENUE_CLP_FACTOR.
+            Fuente: campo <b>ecommerce.total_spent</b> de cada reporte de Mailchimp, en <b>USD</b> (así lo entrega la API, currency_code=USD). Es la venta que Mailchimp <b>atribuye</b> a los correos — su cobertura es parcial en esta cuenta y no captura toda la venta real. Lo ideal a futuro: cruzar la venta real desde GA4/Shopify vía UTM (utm_campaign). Ojo también: una misma orden puede sumar en más de una campaña.
           </div>
         </Section>
       )}
