@@ -473,6 +473,28 @@ export default function Page() {
         )}
       </Section>
 
+      {/* RESUMEN DEL POP-UP 45% (KPIs clave, desde Shopify+Mailchimp) */}
+      {popupTable && (() => {
+        const rec = popupTable.rows.find((r) => r.cohorte === "Recurrente") || {};
+        const nt = popupTable.nuevoTotal || {};
+        const tot = popupTable.total || {};
+        return (
+          <Section title="📣 Pop-up 45% de descuento" subtitle={`Resultado de los clientes captados por el pop-up (desde su inicio el ${popupTable.popupStart}). Ver el detalle por mes más abajo.`}>
+            <div style={grid(170)}>
+              <Card label="Registrados (captados)" value={fmt(tot.registros)} accent={C.gold} sub="clientes con el pop-up" />
+              <Card label="Compraron" value={fmt(tot.compraron)} accent={C.green} sub={`${fmtPct(tot.conversion)} de conversión`} />
+              <Card label="Venta total" value={fmtClp(tot.venta)} accent={C.gold} sub="CLP (Shopify)" />
+              <Card label="🆕 Nuevos" value={fmt(nt.registros)} accent={C.green} sub={`${fmt(nt.compraron)} compraron · ${fmtPct(nt.conversion)}`} />
+              <Card label="🔁 Recurrentes" value={fmt(rec.registros)} accent={C.blue} sub={`${fmt(rec.compraron)} compraron · ${fmtPct(rec.conversion)}`} />
+              <Card label="Venta atribuida a email" value={fmtClp(nt.atribuidaVenta)} accent={C.wine} sub={`${fmt(nt.atribuidaOrdenes)} pedidos · solo nuevos`} />
+            </div>
+            <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>
+              🆕 Nuevos = la cuenta Shopify nació con el pop-up (mayor conversión de recompra a futuro) · 🔁 Recurrentes = clientes que ya existían y volvieron a comprar (compran más, por eso su venta es mayor).
+            </div>
+          </Section>
+        );
+      })()}
+
       {/* RESUMEN EJECUTIVO */}
       {insights.length > 0 && (
         <Section title="🧠 Resumen ejecutivo">
