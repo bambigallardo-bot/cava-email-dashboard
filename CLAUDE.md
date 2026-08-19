@@ -36,6 +36,13 @@ Fuente de verdad = campo **`ecommerce.total_spent`** de cada `/reports/{id}`, qu
 Las ventas son **atribución de Mailchimp por campaña** (parcial, NO captura toda la venta, NO es total de tienda). Una misma orden puede sumar en >1 campaña. **Mejora futura:** cruzar venta real desde GA4/Shopify vía UTM.
 Verificación (semana 24–31 jul 2026, en USD antes de convertir): Shopify US$396,60/6 · General US$474,90/5 · Total US$871,50/11.
 
+## 🎯 Tabla pop-up 45% — Shopify + Mailchimp (2026-08-19)
+`lib/popup.js` + `app/api/popup/route.js` (endpoint aparte, `unstable_cache` 12h, `maxDuration=60`). La UI la carga con su propio fetch/loading. Muestra cohortes **Nuevo** (cuenta Shopify creada ≥ `POPUP_START` 2/6/2026, por mes) vs **Recurrente** (cuenta anterior), con: registros, compraron, %conv, **venta en CLP directa de Shopify**, recibió correo, y venta atribuida a email.
+- **Shopify:** app personalizada del admin de CAVA, scopes read_customers+read_orders. Env: `SHOPIFY_STORE`, `SHOPIFY_TOKEN` (secreto, NUNCA al repo — solo .env.local y Vercel), `SHOPIFY_API_VERSION`. Tienda en CLP. Clientes por tag `EcomSend Popups` (customers/search.json).
+- **Recibió correo:** email es miembro Mailchimp (subscribed/unsubscribed) o destinatario de la campaña de activación 13/07 (`POPUP_ACTIVATION_CAMPAIGN=60fa5b44de`).
+- **Atribución (solo Nuevo):** clic en algún correo (vía `/lists/{id}/members/{hash}/activity?action=click`, captura journeys) con fecha ANTERIOR a la orden. ⚠️ Queda por DEBAJO del conteo manual (ref 26 ped/$1,6M → da ~17-20/$0,9-1,1M) porque la API de Mailchimp no expone completos los clics de Customer Journeys. Mejora futura: cruzar con GA4/Shopify vía UTM.
+- **Validado vs referencia 18-ago:** registros 874 (ref 870), compraron 408 (406), venta $87,5M ($87,4M), recibió 812 (803) — calzan (diferencia de días).
+
 ## 📅 Vista MENSUAL (2026-07-31)
 Vale pidió que los cuadros de resumen sean **mensuales**, no acumulado de 6 meses. Hay un **selector de mes** global (default = mes más reciente). Los totales de **Estado de la audiencia**, **General vs Shopify** y **Ventas** se calculan en el cliente (`computeTotals`) solo con las campañas del mes elegido. La lista de Campañas, Evolución, Tandas y Segmentos siguen mostrando todo el rango cargado (`SINCE_MONTHS=6`, meses completos).
 
