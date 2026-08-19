@@ -293,6 +293,9 @@ export default function Page() {
   const [search, setSearch] = useState("");
   const [showAllGeneral, setShowAllGeneral] = useState(false);
   const [selMonth, setSelMonth] = useState(null); // mes seleccionado para las vistas mensuales
+  const [popupTable, setPopupTable] = useState(null);
+  const [popupErr, setPopupErr] = useState(null);
+  const [popupLoading, setPopupLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
@@ -313,6 +316,15 @@ export default function Page() {
     const id = setInterval(load, REFRESH_MS);
     return () => clearInterval(id);
   }, [load]);
+
+  // Tabla del pop-up 45% (Shopify + Mailchimp) — endpoint aparte, más pesado.
+  useEffect(() => {
+    fetch("/api/popup", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => { if (j.error) setPopupErr(j.error); else setPopupTable(j); })
+      .catch((e) => setPopupErr(String(e.message || e)))
+      .finally(() => setPopupLoading(false));
+  }, []);
 
   const acc = data?.account;
   const del = data?.deliverability;
@@ -612,6 +624,53 @@ export default function Page() {
           </div>
         </Section>
       )}
+
+      {/* TABLA POP-UP 45% (Shopify + Mailchimp) */}
+      <Section title="🎯 Seguimiento del pop-up 45% (1ª compra)" subtitle={`Clientes captados por el pop-up, cruzando Shopify (compras, en CLP) con Mailchimp (correo). Cohorte Nuevo = cuenta creada desde el ${popupTable?.popupStart || "2/6/2026"}.`}>
+        {popupLoading && <div style={{ color: C.muted, fontSize: 14 }}>Cargando datos de Shopify + Mailchimp… (puede tardar unos segundos)</div>}
+        {popupErr && <div style={{ color: "#ffb4c0", fontSize: 13, marginBottom: 10 }}>No se pudo cargar la tabla del pop-up: {popupErr}</div>}
+        {popupTable && (
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table style={tableStyle}>
+                <thead><tr>
+                  <th style={th}>Cohorte</th><th style={th}>Mes</th><th style={th}>Registros</th>
+                  <th style={th}>Compraron</th><th style={th}>% conv.</th><th style={th}>Venta (CLP)</th>
+                  <th style={th}>Recibió correo</th><th style={th}>Venta atribuida a correo</th>
+                </tr></thead>
+                <tbody>
+                  {popupTable.rows.map((r, i) => (
+                    <tr key={i}>
+                      <td style={{ ...td, fontWeight: 600, color: r.cohorte === "Nuevo" ? C.green : C.gold }}>{r.cohorte}</td>
+                      <td style={td}>{r.mes ? monthLabel(r.mes) : <span style={{ color: C.faint }}>—</span>}</td>
+                      <td style={td}>{fmt(r.registros)}</td>
+                      <td style={td}>{fmt(r.compraron)}</td>
+                      <td style={{ ...td, color: C.green }}>{fmtPct(r.conversion)}</td>
+                      <td style={{ ...td, fontWeight: 600 }}>{fmtClp(r.venta)}</td>
+                      <td style={td}>{fmt(r.recibio)} <span style={{ color: C.faint, fontSize: 12 }}>· {r.recibioPct}%</span></td>
+                      <td style={{ ...td, color: C.gold }}>
+                        {r.cohorte === "Recurrente" ? <span style={{ color: C.faint }}>—</span> : <>{fmtClp(r.atribuidaVenta)} <span style={{ color: C.faint, fontSize: 12 }}>· {fmt(r.atribuidaOrdenes)} ped.</span></>}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: C.inner }}>
+                    <td style={{ ...td, fontWeight: 700 }} colSpan={2}>TOTAL general</td>
+                    <td style={{ ...td, fontWeight: 700 }}>{fmt(popupTable.total.registros)}</td>
+                    <td style={{ ...td, fontWeight: 700 }}>{fmt(popupTable.total.compraron)}</td>
+                    <td style={{ ...td, fontWeight: 700, color: C.green }}>{fmtPct(popupTable.total.conversion)}</td>
+                    <td style={{ ...td, fontWeight: 700 }}>{fmtClp(popupTable.total.venta)}</td>
+                    <td style={{ ...td, fontWeight: 700 }}>{fmt(popupTable.total.recibio)} <span style={{ color: C.faint, fontSize: 12 }}>· {popupTable.total.recibioPct}%</span></td>
+                    <td style={{ ...td, fontWeight: 700, color: C.gold }}>{fmtClp(popupTable.nuevoTotal.atribuidaVenta)} <span style={{ color: C.faint, fontSize: 12 }}>· {fmt(popupTable.nuevoTotal.atribuidaOrdenes)} ped.</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
+              Venta en CLP directa de Shopify. <b>Recibió correo</b>: {popupTable.notas?.recibio} <b>Venta atribuida</b> (solo cohorte Nuevo): {popupTable.notas?.atribucion} Actualizado: {popupTable.updatedAt ? new Date(popupTable.updatedAt).toLocaleString("es-CL") : "—"}.
+            </div>
+          </>
+        )}
+      </Section>
 
       {/* FICHAS POR CAMPAÑA */}
       <Section title="🗂️ Campañas" subtitle="Filtra por mundo y explora cada envío.">
