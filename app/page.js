@@ -647,10 +647,11 @@ export default function Page() {
         </Section>
       )}
 
-      {/* TABLA POP-UP 45% (Shopify + Mailchimp) */}
+      {/* TABLA POP-UP 45% — solo se muestra si hay datos. Si falta el token de
+          Shopify (o falla), la sección se OCULTA (nunca mostramos un error crudo). */}
+      {(popupLoading || popupTable) && (
       <Section title="🎯 Seguimiento del pop-up 45% (1ª compra)" subtitle={`Clientes captados por el pop-up, cruzando Shopify (compras, en CLP) con Mailchimp (correo). Cohorte Nuevo = cuenta creada desde el ${popupTable?.popupStart || "2/6/2026"}.`}>
-        {popupLoading && <div style={{ color: C.muted, fontSize: 14 }}>Cargando datos de Shopify + Mailchimp… (puede tardar unos segundos)</div>}
-        {popupErr && <div style={{ color: "#ffb4c0", fontSize: 13, marginBottom: 10 }}>No se pudo cargar la tabla del pop-up: {popupErr}</div>}
+        {popupLoading && <div style={{ color: C.muted, fontSize: 14 }}>Cargando datos de Shopify + Mailchimp…</div>}
         {popupTable && (
           <>
             <div style={{ overflowX: "auto" }}>
@@ -693,6 +694,7 @@ export default function Page() {
           </>
         )}
       </Section>
+      )}
 
       {/* FICHAS POR CAMPAÑA */}
       <Section title="🗂️ Campañas" subtitle="Filtra por mundo y explora cada envío.">
