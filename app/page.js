@@ -479,17 +479,17 @@ export default function Page() {
         const nt = popupTable.nuevoTotal || {};
         const tot = popupTable.total || {};
         return (
-          <Section title="📣 Pop-up 45% de descuento" subtitle={`Resultado de los clientes captados por el pop-up (desde su inicio el ${popupTable.popupStart}). Ver el detalle por mes más abajo.`}>
+          <Section title="📣 Pop-up 45% de descuento" subtitle={`Resultado de los clientes que compraron desde el pop-up (desde su inicio el ${popupTable.popupStart}). Detalle por mes más abajo.`}>
             <div style={grid(170)}>
-              <Card label="Registrados (captados)" value={fmt(tot.registros)} accent={C.gold} sub="clientes con el pop-up" />
-              <Card label="Compraron" value={fmt(tot.compraron)} accent={C.green} sub={`${fmtPct(tot.conversion)} de conversión`} />
-              <Card label="Venta total" value={fmtClp(tot.venta)} accent={C.gold} sub="CLP (Shopify)" />
-              <Card label="🆕 Nuevos" value={fmt(nt.registros)} accent={C.green} sub={`${fmt(nt.compraron)} compraron · ${fmtPct(nt.conversion)}`} />
-              <Card label="🔁 Recurrentes" value={fmt(rec.registros)} accent={C.blue} sub={`${fmt(rec.compraron)} compraron · ${fmtPct(rec.conversion)}`} />
+              {popupTable.captadosMailchimp != null && <Card label="Captados (Mailchimp)" value={fmt(popupTable.captadosMailchimp)} accent={C.purple} sub="suscriptores del pop-up" />}
+              <Card label="Compraron" value={fmt(tot.compraron)} accent={C.green} sub="clientes con pedido" />
+              <Card label="Venta total" value={fmtClp(tot.venta)} accent={C.gold} sub="CLP directo de Shopify" />
+              <Card label="🆕 Nuevos que compraron" value={fmt(nt.compraron)} accent={C.green} sub={`${fmtClp(nt.venta)}`} />
+              <Card label="🔁 Recurrentes que compraron" value={fmt(rec.compraron)} accent={C.blue} sub={`${fmtClp(rec.venta)}`} />
               <Card label="Venta atribuida a email" value={fmtClp(nt.atribuidaVenta)} accent={C.wine} sub={`${fmt(nt.atribuidaOrdenes)} pedidos · solo nuevos`} />
             </div>
             <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>
-              🆕 Nuevos = la cuenta Shopify nació con el pop-up (mayor conversión de recompra a futuro) · 🔁 Recurrentes = clientes que ya existían y volvieron a comprar (compran más, por eso su venta es mayor).
+              🆕 Nuevos = la cuenta Shopify nació con el pop-up · 🔁 Recurrentes = clientes que ya existían y volvieron a comprar (compran más, por eso su venta es mayor). {popupTable.notas?.limitacion}
             </div>
           </Section>
         );
@@ -650,15 +650,15 @@ export default function Page() {
       {/* TABLA POP-UP 45% — solo se muestra si hay datos. Si falta el token de
           Shopify (o falla), la sección se OCULTA (nunca mostramos un error crudo). */}
       {(popupLoading || popupTable) && (
-      <Section title="🎯 Seguimiento del pop-up 45% (1ª compra)" subtitle={`Clientes captados por el pop-up, cruzando Shopify (compras, en CLP) con Mailchimp (correo). Cohorte Nuevo = cuenta creada desde el ${popupTable?.popupStart || "2/6/2026"}.`}>
+      <Section title="🎯 Seguimiento del pop-up 45% (1ª compra)" subtitle={`Clientes que compraron desde el pop-up, con su venta real en CLP (Shopify) cruzada con el correo (Mailchimp). Cohorte Nuevo = cuenta creada desde el ${popupTable?.popupStart || "2/6/2026"}.`}>
         {popupLoading && <div style={{ color: C.muted, fontSize: 14 }}>Cargando datos de Shopify + Mailchimp…</div>}
         {popupTable && (
           <>
             <div style={{ overflowX: "auto" }}>
               <table style={tableStyle}>
                 <thead><tr>
-                  <th style={th}>Cohorte</th><th style={th}>Mes</th><th style={th}>Registros</th>
-                  <th style={th}>Compraron</th><th style={th}>% conv.</th><th style={th}>Venta (CLP)</th>
+                  <th style={th}>Cohorte</th><th style={th}>Mes</th>
+                  <th style={th}>Compraron</th><th style={th}>Venta (CLP)</th>
                   <th style={th}>Recibió correo</th><th style={th}>Venta atribuida a correo</th>
                 </tr></thead>
                 <tbody>
@@ -666,9 +666,7 @@ export default function Page() {
                     <tr key={i}>
                       <td style={{ ...td, fontWeight: 600, color: r.cohorte === "Nuevo" ? C.green : C.gold }}>{r.cohorte}</td>
                       <td style={td}>{r.mes ? monthLabel(r.mes) : <span style={{ color: C.faint }}>—</span>}</td>
-                      <td style={td}>{fmt(r.registros)}</td>
                       <td style={td}>{fmt(r.compraron)}</td>
-                      <td style={{ ...td, color: C.green }}>{fmtPct(r.conversion)}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{fmtClp(r.venta)}</td>
                       <td style={td}>{fmt(r.recibio)} <span style={{ color: C.faint, fontSize: 12 }}>· {r.recibioPct}%</span></td>
                       <td style={{ ...td, color: C.gold }}>
@@ -678,9 +676,7 @@ export default function Page() {
                   ))}
                   <tr style={{ background: C.inner }}>
                     <td style={{ ...td, fontWeight: 700 }} colSpan={2}>TOTAL general</td>
-                    <td style={{ ...td, fontWeight: 700 }}>{fmt(popupTable.total.registros)}</td>
                     <td style={{ ...td, fontWeight: 700 }}>{fmt(popupTable.total.compraron)}</td>
-                    <td style={{ ...td, fontWeight: 700, color: C.green }}>{fmtPct(popupTable.total.conversion)}</td>
                     <td style={{ ...td, fontWeight: 700 }}>{fmtClp(popupTable.total.venta)}</td>
                     <td style={{ ...td, fontWeight: 700 }}>{fmt(popupTable.total.recibio)} <span style={{ color: C.faint, fontSize: 12 }}>· {popupTable.total.recibioPct}%</span></td>
                     <td style={{ ...td, fontWeight: 700, color: C.gold }}>{fmtClp(popupTable.nuevoTotal.atribuidaVenta)} <span style={{ color: C.faint, fontSize: 12 }}>· {fmt(popupTable.nuevoTotal.atribuidaOrdenes)} ped.</span></td>
@@ -689,7 +685,7 @@ export default function Page() {
               </table>
             </div>
             <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-              Venta en CLP directa de Shopify. <b>Recibió correo</b>: {popupTable.notas?.recibio} <b>Venta atribuida</b> (solo cohorte Nuevo): {popupTable.notas?.atribucion} Actualizado: {popupTable.updatedAt ? new Date(popupTable.updatedAt).toLocaleString("es-CL") : "—"}.
+              {popupTable.notas?.limitacion} <b>Recibió correo</b>: {popupTable.notas?.recibio} <b>Venta atribuida</b> (solo Nuevos): {popupTable.notas?.atribucion} Actualizado: {popupTable.updatedAt ? new Date(popupTable.updatedAt).toLocaleString("es-CL") : "—"}.
             </div>
           </>
         )}
