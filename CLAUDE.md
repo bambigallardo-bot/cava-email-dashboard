@@ -43,6 +43,33 @@ Verificación (semana 24–31 jul 2026, en USD antes de convertir): Shopify US$3
 - **Atribución (solo Nuevo):** clic en algún correo (vía `/lists/{id}/members/{hash}/activity?action=click`, captura journeys) con fecha ANTERIOR a la orden. ⚠️ Queda por DEBAJO del conteo manual (ref 26 ped/$1,6M → da ~17-20/$0,9-1,1M) porque la API de Mailchimp no expone completos los clics de Customer Journeys. Mejora futura: cruzar con GA4/Shopify vía UTM.
 - **Validado vs referencia 18-ago:** registros 874 (ref 870), compraron 408 (406), venta $87,5M ($87,4M), recibió 812 (803) — calzan (diferencia de días).
 
+## 💬 Pestaña WhatsApp (ManyChat) — 2026-09-10
+Barra de pestañas arriba: **📧 Email · Mailchimp** y **💬 WhatsApp · ManyChat**. `app/page.js` guarda `tab` en estado y envuelve todo el contenido de email; la pestaña de WhatsApp vive aparte en `app/whatsapp-tab.js`.
+
+- `lib/whatsapp.js` + `app/api/whatsapp/route.js` (`maxDuration=60`). Trae **una sola vez** todos los pedidos de Shopify del rango completo y recorta las ventanas en memoria.
+- **Datos:** `data/wsp-envios.json` (calendario editable) y `data/wsp-audiencia.json` (los 514 destinatarios).
+
+### 🔒 Privacidad (el repo es PÚBLICO)
+`data/wsp-audiencia.json` guarda **solo huellas HMAC-SHA256** de teléfono y correo, calculadas con `WSP_SALT` (env, ya cargada en Vercel Production). Sin esa clave no son reversibles. El archivo **nunca** se sirve al navegador y la API responde solo agregados. Si cambia `WSP_SALT` hay que **regenerar el archivo** (el script está en `~/manychat/CAVA_WSP_AGENTE_COMPLETO.md`).
+
+### Cómo se atribuye
+Por **identidad**, no por UTM: WhatsApp abre los links en su navegador interno y borra los parámetros (ManyChat reporta **0,00% de clics** en todos los envíos). Se cruza quién recibió cada envío contra los pedidos de Shopify de las 72h siguientes, por teléfono y por **todos** los correos de cada persona (hay 3 clientes con dos cuentas).
+
+Tres decisiones de método que importan:
+1. **La ventana se corta si sale otro envío antes de las 72h.** Si no, las compras del segundo se le atribuyen también al primero (pasó con el 1/9, quedó en 54h).
+2. **La línea base es el ritmo promedio de los 21 días previos**, no el mismo día de la semana anterior. La tienda tuvo días con cero pedidos (28 y 29 de agosto) y con esa base cualquier resultado se disparaba por azar.
+3. **El veredicto se calcula por razón, no por diferencia de porcentajes.** +368% de la lista vs +355% de la tienda es un empate. Banda de tolerancia de 20%.
+
+`minimoContactos: 10` deja fuera los envíos de prueba (1 o 2 contactos). **No subirlo a 100**: el segmento Hasta 3 compras tiene 89 personas y quedaría oculto.
+
+La caché (`WSP_CACHE_S`, 1h) se invalida sola al editar `data/wsp-envios.json`, porque la clave incluye una huella del archivo.
+
+### ⚠️ Regla 1 aplicada acá
+El cálculo produce un veredicto en palabras ("el alza viene del contexto, no del envío"). **Ese veredicto NO se muestra en el dashboard**: los números de la comparación quedan, la interpretación la da la KAM en la reunión. La versión cruda con veredicto está en `~/manychat/cava_cruza.py`, para uso interno.
+
+### Estado al 2026-09-10
+Base de 514 personas en 3 segmentos (204 / 89 / 221). Dos envíos medidos (1/9 Vitis y 3/9 Edición Limitada) y 7 programados hasta el 6 de octubre. Contexto completo del proyecto: `~/manychat/CAVA_WSP_AGENTE_COMPLETO.md`.
+
 ## 📅 Vista MENSUAL (2026-07-31)
 Vale pidió que los cuadros de resumen sean **mensuales**, no acumulado de 6 meses. Hay un **selector de mes** global (default = mes más reciente). Los totales de **Estado de la audiencia**, **General vs Shopify** y **Ventas** se calculan en el cliente (`computeTotals`) solo con las campañas del mes elegido. La lista de Campañas, Evolución, Tandas y Segmentos siguen mostrando todo el rango cargado (`SINCE_MONTHS=6`, meses completos).
 

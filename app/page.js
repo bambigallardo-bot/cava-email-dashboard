@@ -5,6 +5,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
+import WhatsappTab from "./whatsapp-tab";
 
 const REFRESH_MS = 120000;
 
@@ -286,6 +287,7 @@ function SegmentBar({ name, count, max, color }) {
 }
 
 export default function Page() {
+  const [tab, setTab] = useState("email"); // email | wsp
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -293,6 +295,7 @@ export default function Page() {
   const [search, setSearch] = useState("");
   const [showAllGeneral, setShowAllGeneral] = useState(false);
   const [selMonth, setSelMonth] = useState(null); // mes seleccionado para las vistas mensuales
+  const [traceSort, setTraceSort] = useState("venta"); // orden del ranking de trazabilidad
   const [popupTable, setPopupTable] = useState(null);
   const [popupErr, setPopupErr] = useState(null);
   const [popupLoading, setPopupLoading] = useState(true);
@@ -362,6 +365,13 @@ export default function Page() {
   const monthName = selMonth ? monthLabel(selMonth) : "";
   const fxRate = data?.fx?.usdClp || 950;
 
+  // Ranking de campañas del mes por venta / órdenes / apertura (trazabilidad).
+  const rankCamps = useMemo(() => {
+    const inMonth = allCamps.filter((c) => monthKey(c.date) === selMonth);
+    const key = traceSort === "orders" ? "orders" : traceSort === "open" ? "openRate" : "revenueClp";
+    return [...inMonth].sort((a, b) => (b[key] || 0) - (a[key] || 0));
+  }, [allCamps, selMonth, traceSort]);
+
   const fichas = useMemo(() => {
     const q = search.trim().toLowerCase();
     return worldCamps.filter((c) => !q || (c.title || "").toLowerCase().includes(q) || (c.subject || "").toLowerCase().includes(q));
@@ -424,14 +434,46 @@ export default function Page() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <img src="/logo-cava.png" alt="CAVA Morandé" style={{ height: 52, width: "auto" }} />
           <div style={{ borderLeft: `1px solid ${C.border}`, paddingLeft: 16 }}>
-          <h1 style={{ margin: 0, fontSize: 22 }}>Dashboard Email</h1>
+          <h1 style={{ margin: 0, fontSize: 22 }}>{tab === "wsp" ? "Dashboard WhatsApp" : "Dashboard Email"}</h1>
           <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {loading ? "Cargando…" : data?.updatedAt ? `Actualizado: ${new Date(data.updatedAt).toLocaleString("es-CL")}${data?.sinceMonths ? ` · últimos ${data.sinceMonths} meses` : ""}${data?.stale ? " · última copia (Mailchimp ocupado)" : ""}` : ""}
           </div>
           </div>
         </div>
-        <button onClick={load} style={{ background: C.wine, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontSize: 14 }}>Actualizar ahora</button>
+        {tab === "email" && <button onClick={load} style={{ background: C.wine, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontSize: 14 }}>Actualizar ahora</button>}
       </header>
+
+      {/* --- PESTAÑAS --- */}
+      <nav style={{ display: "flex", gap: 8, marginTop: 20, borderBottom: `1px solid ${C.border}` }}>
+        {[
+          { id: "email", label: "📧 Email", sub: "Mailchimp" },
+          { id: "wsp", label: "💬 WhatsApp", sub: "ManyChat" },
+        ].map((t) => {
+          const on = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                background: on ? C.panel : "transparent",
+                color: on ? C.text : C.muted,
+                border: `1px solid ${on ? C.border : "transparent"}`,
+                borderBottom: on ? `2px solid ${C.wine}` : "2px solid transparent",
+                borderRadius: "10px 10px 0 0",
+                padding: "10px 18px 8px",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: on ? 700 : 500,
+              }}
+            >
+              {t.label}
+              <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: C.faint, marginTop: 2 }}>{t.sub}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {tab === "wsp" ? <WhatsappTab /> : (<>
 
       {error && <div style={{ marginTop: 20, background: "#3b1620", border: "1px solid #6b2333", color: "#ffb4c0", padding: "12px 16px", borderRadius: 12 }}>{error}</div>}
 
@@ -642,7 +684,70 @@ export default function Page() {
             <Card label="Ingresos · Shopify" value={fmtClp(mTotals.shopify.revenueClp)} accent={C.wine} sub={`${fmt(mTotals.shopify.orders)} órdenes`} />
           </div>
           <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-            Fuente: campo <b>ecommerce.total_spent</b> de Mailchimp (viene en USD), convertido a CLP a <b>1 USD = ${fmt(fxRate)}</b> (ajustable). Es la venta que Mailchimp <b>atribuye</b> a los correos — cobertura parcial en esta cuenta, no captura toda la venta real ni es el total de la tienda. A futuro conviene cruzarla con la venta real de GA4/Shopify vía UTM. Ojo: una misma orden puede sumar en más de una campaña.
+            Fuente: campo <b>ecommerce.total_spent</b> de Mailchimp (viene en USD), convertido a CLP a <b>1 USD = ${fmt(fxRate)}</b> (ajustable). Es la venta que Mailchimp <b>atribuye</b> a los correos: cobertura parcial en esta cuenta, no captura toda la venta real ni es el total de la tienda. A futuro conviene cruzarla con la venta real de GA4/Shopify vía UTM. Ojo: una misma orden puede sumar en más de una campaña.
+          </div>
+        </Section>
+      )}
+
+      {/* TRAZABILIDAD DE VENTAS: canales + ranking por campaña */}
+      {totals && (
+        <Section title="🔎 Trazabilidad de ventas" subtitle={`De dónde viene la venta: envíos normales vs pop-up, y cuánto vendió cada campaña de ${monthName}.`}>
+          <div style={grid(320)}>
+            <div style={{ ...panel, borderTop: `3px solid ${C.blue}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.blue }}>📧 Envíos normales (campañas)</div>
+              <div style={{ fontSize: 11, color: C.faint, margin: "3px 0 12px" }}>{monthName} · venta atribuida por Mailchimp al correo</div>
+              <div style={grid(115)}>
+                <Mini label="Campañas" value={fmt(mTotals.all.campaigns)} />
+                <Mini label="Órdenes" value={fmt(mTotals.all.orders)} color={C.gold} />
+                <Mini label="Venta (CLP)" value={fmtClp(mTotals.all.revenueClp)} color={C.gold} />
+              </div>
+            </div>
+            {popupTable && (
+              <div style={{ ...panel, borderTop: `3px solid ${C.wine}` }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.wine }}>📣 Pop-up 45% (captación)</div>
+                <div style={{ fontSize: 11, color: C.faint, margin: "3px 0 12px" }}>Acumulado desde {popupTable.popupStart} · venta real de la tienda Shopify</div>
+                <div style={grid(115)}>
+                  <Mini label="Compraron" value={fmt(popupTable.total.compraron)} color={C.green} />
+                  <Mini label="Venta (CLP)" value={fmtClp(popupTable.total.venta)} color={C.gold} />
+                  <Mini label="Atrib. a email" value={fmtClp(popupTable.nuevoTotal.atribuidaVenta)} color={C.wine} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: 22 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>Venta por campaña · {monthName}</div>
+              <select value={traceSort} onChange={(e) => setTraceSort(e.target.value)} style={selStyle}>
+                <option value="venta">Ordenar: Venta</option>
+                <option value="orders">Ordenar: Órdenes</option>
+                <option value="open">Ordenar: Apertura</option>
+              </select>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={tableStyle}>
+                <thead><tr>
+                  <th style={th}>Campaña</th><th style={th}>Mundo</th><th style={th}>Envíos</th>
+                  <th style={th}>Apertura</th><th style={th}>Órdenes</th><th style={th}>Venta (CLP)</th>
+                </tr></thead>
+                <tbody>
+                  {rankCamps.map((c) => (
+                    <tr key={c.id}>
+                      <td style={td}>{c.title}</td>
+                      <td style={td}><WorldBadge world={c.world} /></td>
+                      <td style={td}>{fmt(c.sent)}</td>
+                      <td style={{ ...td, color: C.green }}>{fmtPct(c.openRate)}</td>
+                      <td style={{ ...td, color: C.gold, fontWeight: 600 }}>{fmt(c.orders)}</td>
+                      <td style={{ ...td, fontWeight: 600 }}>{fmtClp(c.revenueClp)}</td>
+                    </tr>
+                  ))}
+                  {rankCamps.length === 0 && <tr><td style={td} colSpan={6}><span style={{ color: C.muted }}>Sin campañas este mes.</span></td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
+              La venta por campaña es la que Mailchimp atribuye a cada correo (CLP). El pop-up de arriba es venta real de Shopify, por eso su monto es mucho mayor: son dos formas distintas de medir, no se suman.
+            </div>
           </div>
         </Section>
       )}
@@ -764,6 +869,8 @@ export default function Page() {
       )}
 
       <footer style={{ marginTop: 50, color: C.faint, fontSize: 12, textAlign: "center" }}>Datos vía API de Mailchimp (audiencia E-commerce) · CAVA Morandé</footer>
+
+      </>)}
     </main>
   );
 }

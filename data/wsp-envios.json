@@ -1,0 +1,51 @@
+{
+  "_nota": "Calendario de envíos de WhatsApp. 'producto' es la palabra que se busca en los títulos de los productos del pedido. 'manychat' son las métricas reales de la transmisión, copiadas del panel Broadcasts. OJO: esos números MADURAN (el 3/9 pasó de 360/241 a 372/258 en 11 días), conviene refrescarlos al cerrar el mes. Un envío SIN bloque 'manychat' no publica resultados: queda 'por confirmar'. Los envíos de prueba (1 o 2 contactos) se filtran con minimoContactos. OJO: el umbral es 10, no 100, porque el segmento Hasta 3 compras tiene 89 personas y con 100 quedaba oculto.",
+  "minimoContactos": 10,
+  "costoPorContactoUsd": 0.114,
+  "ventanaHoras": 72,
+  "envios": [
+    { "id": "sep01-vitis", "fecha": "2026-09-01", "hora": "12:10",
+      "vino": "Vitis Única Carmenère", "producto": "vitis",
+      "tag": null, "segmento": "Base anterior (sin segmentar)",
+      "manychat": { "enviados": 441, "entregados": 387, "leidos": 292, "clics": 0 },
+      "aproximado": true,
+      "nota": "Envío anterior a la segmentación actual. Se cruza contra las 514 personas de hoy, que no son exactamente las 441 que lo recibieron, así que la lectura es aproximada." },
+
+    { "id": "sep03-edicion-limitada", "fecha": "2026-09-03", "hora": "18:00",
+      "vino": "Edición Limitada Carmenère", "producto": "limitada",
+      "tag": null, "segmento": "Base anterior (sin segmentar)",
+      "manychat": { "enviados": 438, "entregados": 372, "leidos": 258, "clics": 0 },
+      "aproximado": true,
+      "nota": "Envío anterior a la segmentación actual. Mismo criterio que el del 1/9." },
+
+    { "id": "sep14-vitis-mas3", "fecha": "2026-09-14", "hora": "15:24",
+      "vino": "Vitis Única Carmenère", "producto": "vitis",
+      "tag": "Mas-de-3-compras", "segmento": "Más de 3 compras",
+      "manychat": { "enviados": 204, "entregados": 186, "leidos": 135, "clics": 0 } },
+
+    { "id": "sep16-vitis-hasta3", "fecha": "2026-09-16", "hora": "12:10",
+      "vino": "Vitis Única Carmenère", "producto": "vitis",
+      "tag": "Hasta-3-compras", "segmento": "Hasta 3 compras",
+      "manychat": { "enviados": 90, "entregados": 84, "leidos": 58, "clics": 0 } },
+
+    { "id": "sep22-vitis-hasta2", "fecha": "2026-09-22", "hora": "10:00",
+      "vino": "Vitis Única Carmenère", "producto": "vitis",
+      "tag": "Hasta-2-compras", "segmento": "Hasta 2 compras" },
+
+    { "id": "sep24-el-mas3", "fecha": "2026-09-24", "hora": "10:00",
+      "vino": "Edición Limitada Carmenère", "producto": "limitada",
+      "tag": "Mas-de-3-compras", "segmento": "Más de 3 compras" },
+
+    { "id": "sep29-el-hasta3", "fecha": "2026-09-29", "hora": "10:00",
+      "vino": "Edición Limitada Carmenère", "producto": "limitada",
+      "tag": "Hasta-3-compras", "segmento": "Hasta 3 compras" },
+
+    { "id": "oct01-el-hasta2", "fecha": "2026-10-01", "hora": "10:00",
+      "vino": "Edición Limitada Carmenère", "producto": "limitada",
+      "tag": "Hasta-2-compras", "segmento": "Hasta 2 compras" },
+
+    { "id": "oct06-extrabrut", "fecha": "2026-10-06", "hora": "10:00",
+      "vino": "Extra Brut Charmat", "producto": "charmat",
+      "tag": null, "segmento": "Los 3 segmentos" }
+  ]
+}
