@@ -294,6 +294,7 @@ export default function Page() {
   const [world, setWorld] = useState("all"); // all | general | shopify
   const [search, setSearch] = useState("");
   const [showAllGeneral, setShowAllGeneral] = useState(false);
+  const [showAllPopCamps, setShowAllPopCamps] = useState(false);
   const [selMonth, setSelMonth] = useState(null); // mes seleccionado para las vistas mensuales
   const [traceSort, setTraceSort] = useState("venta"); // orden del ranking de trazabilidad
   const [popupTable, setPopupTable] = useState(null);
@@ -795,6 +796,44 @@ export default function Page() {
           </>
         )}
       </Section>
+      )}
+
+      {/* COMPRAS DE LA BASE DEL POP-UP: total por mes + por cuál correo compraron */}
+      {popupTable?.popupByMonth?.length > 0 && (
+        <Section title="💳 Compras de la base del pop-up" subtitle="Cuánto compran en Shopify los clientes captados por el pop-up: total por mes, y según el correo que gatilló la compra.">
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Total por mes (venta real de Shopify de clientes con el pop-up)</div>
+          <div style={grid(150)}>
+            {popupTable.popupByMonth.map((m) => (
+              <Card key={m.mes} label={monthLabel(m.mes)} value={fmtClp(m.venta)} accent={C.gold} sub={`${fmt(m.orders)} pedidos`} />
+            ))}
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, margin: "22px 0 10px" }}>Por cuál correo compró la base del pop-up</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={tableStyle}>
+              <thead><tr><th style={th}>Correo</th><th style={th}>Órdenes</th><th style={th}>Venta (CLP)</th></tr></thead>
+              <tbody>
+                {(showAllPopCamps ? popupTable.popupByCampaign : popupTable.popupByCampaign.slice(0, 12)).map((c, i) => (
+                  <tr key={i}>
+                    <td style={td}>{c.title}</td>
+                    <td style={td}>{fmt(c.orders)}</td>
+                    <td style={{ ...td, color: C.gold, fontWeight: 600 }}>{fmtClp(c.venta)}</td>
+                  </tr>
+                ))}
+                {(!popupTable.popupByCampaign || popupTable.popupByCampaign.length === 0) && (
+                  <tr><td style={td} colSpan={3}><span style={{ color: C.muted }}>Aún sin compras con correo asignado.</span></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {popupTable.popupByCampaign?.length > 12 && (
+            <button onClick={() => setShowAllPopCamps((v) => !v)} style={{ ...selStyle, cursor: "pointer", marginTop: 10 }}>
+              {showAllPopCamps ? "Ver menos" : `Ver todos (${popupTable.popupByCampaign.length})`}
+            </button>
+          )}
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
+            El correo se asigna por el último clic del cliente antes de su compra (incluye campañas y automatizaciones como Bienvenida o Carrito). Es venta real de Shopify. Los clics de automatizaciones no están completos en la API de Mailchimp, así que algunas compras quedan sin correo asignado y no aparecen en esta tabla.
+          </div>
+        </Section>
       )}
 
       {/* FICHAS POR CAMPAÑA */}
