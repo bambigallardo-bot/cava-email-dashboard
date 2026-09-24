@@ -807,31 +807,38 @@ export default function Page() {
               <Card key={m.mes} label={monthLabel(m.mes)} value={fmtClp(m.venta)} accent={C.gold} sub={`${fmt(m.orders)} pedidos`} />
             ))}
           </div>
-          <div style={{ fontSize: 15, fontWeight: 600, margin: "22px 0 10px" }}>Por cuál correo compró la base del pop-up</div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={tableStyle}>
-              <thead><tr><th style={th}>Correo</th><th style={th}>Órdenes</th><th style={th}>Venta (CLP)</th></tr></thead>
-              <tbody>
-                {(showAllPopCamps ? popupTable.popupByCampaign : popupTable.popupByCampaign.slice(0, 12)).map((c, i) => (
-                  <tr key={i}>
-                    <td style={td}>{c.title}</td>
-                    <td style={td}>{fmt(c.orders)}</td>
-                    <td style={{ ...td, color: C.gold, fontWeight: 600 }}>{fmtClp(c.venta)}</td>
-                  </tr>
-                ))}
-                {(!popupTable.popupByCampaign || popupTable.popupByCampaign.length === 0) && (
-                  <tr><td style={td} colSpan={3}><span style={{ color: C.muted }}>Aún sin compras con correo asignado.</span></td></tr>
+          {(() => {
+            const popCamps = (popupTable.popupByCampaignMonth && popupTable.popupByCampaignMonth[selMonth]) || [];
+            return (
+              <>
+                <div style={{ fontSize: 15, fontWeight: 600, margin: "22px 0 10px" }}>Por cuál correo compró la base del pop-up · {monthName}</div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={tableStyle}>
+                    <thead><tr><th style={th}>Correo</th><th style={th}>Órdenes</th><th style={th}>Venta (CLP)</th></tr></thead>
+                    <tbody>
+                      {(showAllPopCamps ? popCamps : popCamps.slice(0, 12)).map((c, i) => (
+                        <tr key={i}>
+                          <td style={td}>{c.title}</td>
+                          <td style={td}>{fmt(c.orders)}</td>
+                          <td style={{ ...td, color: C.gold, fontWeight: 600 }}>{fmtClp(c.venta)}</td>
+                        </tr>
+                      ))}
+                      {popCamps.length === 0 && (
+                        <tr><td style={td} colSpan={3}><span style={{ color: C.muted }}>Sin compras con correo asignado en {monthName}.</span></td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {popCamps.length > 12 && (
+                  <button onClick={() => setShowAllPopCamps((v) => !v)} style={{ ...selStyle, cursor: "pointer", marginTop: 10 }}>
+                    {showAllPopCamps ? "Ver menos" : `Ver todos (${popCamps.length})`}
+                  </button>
                 )}
-              </tbody>
-            </table>
-          </div>
-          {popupTable.popupByCampaign?.length > 12 && (
-            <button onClick={() => setShowAllPopCamps((v) => !v)} style={{ ...selStyle, cursor: "pointer", marginTop: 10 }}>
-              {showAllPopCamps ? "Ver menos" : `Ver todos (${popupTable.popupByCampaign.length})`}
-            </button>
-          )}
+              </>
+            );
+          })()}
           <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-            El correo se asigna por el último clic del cliente antes de su compra (incluye campañas y automatizaciones como Bienvenida o Carrito). Es venta real de Shopify. Los clics de automatizaciones no están completos en la API de Mailchimp, así que algunas compras quedan sin correo asignado y no aparecen en esta tabla.
+            Muestra las compras hechas en {monthName} (según el selector de mes de arriba), asignadas al último correo que el cliente clickeó antes de comprar (campañas y automatizaciones como Bienvenida o Carrito). Es venta real de Shopify. Los clics de automatizaciones no están completos en la API de Mailchimp, así que algunas compras quedan sin correo asignado.
           </div>
         </Section>
       )}
