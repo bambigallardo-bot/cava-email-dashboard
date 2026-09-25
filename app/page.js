@@ -287,7 +287,7 @@ function SegmentBar({ name, count, max, color }) {
 }
 
 export default function Page() {
-  const [tab, setTab] = useState("email"); // email | wsp
+  const [tab, setTab] = useState("email"); // email | popup | meta | wsp
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -436,19 +436,21 @@ export default function Page() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <img src="/logo-cava.png" alt="CAVA Morandé" style={{ height: 52, width: "auto" }} />
           <div style={{ borderLeft: `1px solid ${C.border}`, paddingLeft: 16 }}>
-          <h1 style={{ margin: 0, fontSize: 22 }}>{tab === "wsp" ? "Dashboard WhatsApp" : "Dashboard Email"}</h1>
+          <h1 style={{ margin: 0, fontSize: 22 }}>{{ wsp: "Dashboard WhatsApp", popup: "Dashboard Pop-up", meta: "Dashboard Meta + Shopify" }[tab] || "Dashboard Email"}</h1>
           <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {loading ? "Cargando…" : data?.updatedAt ? `Actualizado: ${new Date(data.updatedAt).toLocaleString("es-CL")}${data?.sinceMonths ? ` · últimos ${data.sinceMonths} meses` : ""}${data?.stale ? " · última copia (Mailchimp ocupado)" : ""}` : ""}
           </div>
           </div>
         </div>
-        {tab === "email" && <button onClick={load} style={{ background: C.wine, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontSize: 14 }}>Actualizar ahora</button>}
+        {tab !== "wsp" && <button onClick={load} style={{ background: C.wine, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontSize: 14 }}>Actualizar ahora</button>}
       </header>
 
       {/* --- PESTAÑAS --- */}
       <nav style={{ display: "flex", gap: 8, marginTop: 20, borderBottom: `1px solid ${C.border}` }}>
         {[
           { id: "email", label: "📧 Email", sub: "Mailchimp" },
+          { id: "popup", label: "🎯 Pop-up", sub: "Shopify" },
+          { id: "meta", label: "📣 Meta + Shopify", sub: "Adquisición" },
           { id: "wsp", label: "💬 WhatsApp", sub: "ManyChat" },
         ].map((t) => {
           const on = tab === t.id;
@@ -480,7 +482,7 @@ export default function Page() {
       {error && <div style={{ marginTop: 20, background: "#3b1620", border: "1px solid #6b2333", color: "#ffb4c0", padding: "12px 16px", borderRadius: 12 }}>{error}</div>}
 
       {/* SELECTOR DE MES — las métricas de resumen son MENSUALES */}
-      {monthOptions.length > 0 && (
+      {(tab === "email" || tab === "popup") && monthOptions.length > 0 && (
         <div style={{ ...panel, marginTop: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", borderLeft: `3px solid ${C.wine}` }}>
           <span style={{ fontSize: 14, fontWeight: 700 }}>📅 Mes del informe</span>
           <select value={selMonth || ""} onChange={(e) => setSelMonth(e.target.value)} style={{ ...selStyle, fontSize: 14, fontWeight: 600 }}>
@@ -491,6 +493,7 @@ export default function Page() {
       )}
 
       {/* MÉTRICAS DE LA AUDIENCIA — arranque del informe (mensual) */}
+      {tab === "email" && (
       <Section title="👥 Estado de la audiencia" subtitle={`Base actual y rendimiento de ${monthName || "el mes"}.`}>
         {data?.errors?.account && <div style={{ color: "#ffb4c0", fontSize: 13, marginBottom: 10 }}>{data.errors.account}</div>}
         <div style={grid(160)}>
@@ -516,9 +519,10 @@ export default function Page() {
           </div>
         )}
       </Section>
+      )}
 
       {/* RESUMEN DEL POP-UP 45% (KPIs clave, desde Shopify+Mailchimp) */}
-      {popupTable && (() => {
+      {tab === "popup" && popupTable && (() => {
         const rec = popupTable.rows.find((r) => r.cohorte === "Recurrente") || {};
         const nt = popupTable.nuevoTotal || {};
         const tot = popupTable.total || {};
@@ -540,7 +544,7 @@ export default function Page() {
       })()}
 
       {/* META ADS: campaña de registros activa (adquisición del pop-up) */}
-      {meta && (
+      {tab === "meta" && meta && (
         <Section title="📣 Meta Ads · Campaña de registros" subtitle="Resultados de la campaña activa que trae registros al pop-up (Meta Ads).">
           <div style={{ ...panel, borderLeft: `3px solid ${C.wine}`, marginBottom: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>{meta.campaign}</span>
@@ -559,15 +563,30 @@ export default function Page() {
         </Section>
       )}
 
+      {/* INGRESOS SHOPIFY (resumen) — pestaña Meta + Shopify */}
+      {tab === "meta" && popupTable && (
+        <Section title="🛒 Ingresos de Shopify (base del pop-up)" subtitle="Venta real de la tienda Shopify de los clientes captados por el pop-up.">
+          <div style={grid(160)}>
+            <Card label="Venta total acumulada" value={fmtClp(popupTable.total?.venta)} accent={C.gold} sub={`${fmt(popupTable.total?.compraron)} clientes compraron`} />
+            {(popupTable.popupByMonth || []).map((m) => (
+              <Card key={m.mes} label={monthLabel(m.mes)} value={fmtClp(m.venta)} accent={C.blue} sub={`${fmt(m.orders)} pedidos`} />
+            ))}
+          </div>
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>
+            Venta real de Shopify (CLP). El detalle por cohorte y por correo está en la pestaña Pop-up.
+          </div>
+        </Section>
+      )}
+
       {/* RESUMEN EJECUTIVO */}
-      {insights.length > 0 && (
+      {tab === "email" && insights.length > 0 && (
         <Section title="🧠 Resumen ejecutivo">
           <div style={grid(300)}>{insights.map((it, i) => <Insight key={i} {...it} />)}</div>
         </Section>
       )}
 
       {/* VISTA DIVIDIDA: GENERAL vs SHOPIFY (mensual) */}
-      {totals && (
+      {tab === "email" && totals && (
         <Section title="⚖️ General vs Shopify" subtitle={`Rendimiento comparado de los dos mundos de segmentos · ${monthName}.`}>
           <div style={grid(320)}>
             <WorldTotals label="🔵 Segmentos generales" color={C.blue} t={mTotals.general} />
@@ -577,7 +596,7 @@ export default function Page() {
       )}
 
       {/* SEGMENTOS: tamaño de las bases */}
-      {segs && (
+      {tab === "email" && segs && (
         <Section title="🗂️ Segmentos y tamaño de las bases">
           {data?.errors?.segments && <div style={{ color: "#ffb4c0", fontSize: 13, marginBottom: 10 }}>{data.errors.segments}</div>}
           <div style={grid(340)}>
@@ -636,7 +655,7 @@ export default function Page() {
       )}
 
       {/* EVOLUCIÓN */}
-      {timeline.length > 1 && (
+      {tab === "email" && timeline.length > 1 && (
         <Section title="📈 Evolución (últimas campañas)" subtitle="Apertura y clic % por envío.">
           <div style={{ ...panel, height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -655,7 +674,7 @@ export default function Page() {
       )}
 
       {/* TANDAS DE REACTIVACIÓN */}
-      {reactivation.length > 0 && (
+      {tab === "email" && reactivation.length > 0 && (
         <Section title="🔁 Tandas de reactivación" subtitle="Correos «Te extrañamos» a dormidos y reactivados. El clic = «quiero seguir»: quienes hacen clic son los que deciden quedarse.">
           <div style={{ overflowX: "auto" }}>
             <table style={tableStyle}>
@@ -698,7 +717,7 @@ export default function Page() {
       )}
 
       {/* VENTAS (mensual, CLP) */}
-      {totals && (
+      {tab === "email" && totals && (
         <Section title="🛒 Ventas atribuidas a las campañas de email (CLP)" subtitle={`Compras que Mailchimp atribuye a los correos de ${monthName}. NO es el total de ventas de la tienda.`}>
           <div style={grid(200)}>
             <Card label={`Ingresos por email · ${monthName}`} value={fmtClp(mTotals.all.revenueClp)} accent={C.gold} sub={`${fmt(mTotals.all.orders)} órdenes atribuidas`} />
@@ -712,7 +731,7 @@ export default function Page() {
       )}
 
       {/* TRAZABILIDAD DE VENTAS: canales + ranking por campaña */}
-      {totals && (
+      {tab === "email" && totals && (
         <Section title="🔎 Trazabilidad de ventas" subtitle={`De dónde viene la venta: envíos normales vs pop-up, y cuánto vendió cada campaña de ${monthName}.`}>
           <div style={grid(320)}>
             <div style={{ ...panel, borderTop: `3px solid ${C.blue}` }}>
@@ -776,7 +795,7 @@ export default function Page() {
 
       {/* TABLA POP-UP 45% — solo se muestra si hay datos. Si falta el token de
           Shopify (o falla), la sección se OCULTA (nunca mostramos un error crudo). */}
-      {(popupLoading || popupTable) && (
+      {tab === "popup" && (popupLoading || popupTable) && (
       <Section title="🎯 Seguimiento del pop-up 45% (1ª compra)" subtitle={`Clientes que compraron desde el pop-up, con su venta real en CLP (Shopify) cruzada con el correo (Mailchimp). Cohorte Nuevo = cuenta creada desde el ${popupTable?.popupStart || "2/6/2026"}.`}>
         {popupLoading && <div style={{ color: C.muted, fontSize: 14 }}>Cargando datos de Shopify + Mailchimp…</div>}
         {popupTable && (
@@ -820,7 +839,7 @@ export default function Page() {
       )}
 
       {/* COMPRAS DE LA BASE DEL POP-UP: total por mes + por cuál correo compraron */}
-      {popupTable?.popupByMonth?.length > 0 && (
+      {tab === "popup" && popupTable?.popupByMonth?.length > 0 && (
         <Section title="💳 Compras de la base del pop-up" subtitle="Cuánto compran en Shopify los clientes captados por el pop-up: total por mes, y según el correo que gatilló la compra.">
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Total por mes (venta real de Shopify de clientes con el pop-up)</div>
           <div style={grid(150)}>
@@ -865,6 +884,7 @@ export default function Page() {
       )}
 
       {/* FICHAS POR CAMPAÑA */}
+      {tab === "email" && (
       <Section title="🗂️ Campañas" subtitle="Filtra por mundo y explora cada envío.">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 14 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -889,9 +909,10 @@ export default function Page() {
           {fichas.length === 0 && <div style={{ color: C.muted, fontSize: 14 }}>Sin campañas para este filtro.</div>}
         </div>
       </Section>
+      )}
 
       {/* AUTOMATIZACIONES IMPLEMENTADAS (checklist) */}
-      {automations.length > 0 && (
+      {tab === "email" && automations.length > 0 && (
         <Section title="⚙️ Automatizaciones implementadas" subtitle="Flujos automáticos (Customer Journeys) que trabajan solos 24/7 en la cuenta.">
           <div style={grid(300)}>
             {automations.map((a) => (
@@ -913,7 +934,7 @@ export default function Page() {
       )}
 
       {/* SUGERENCIAS IMPORTANTES · REVISIÓN DEL CLIENTE (antes: entregabilidad) */}
-      {del && (
+      {tab === "email" && del && (
         <Section title="💡 Sugerencias importantes · para revisión del cliente" subtitle="Puntos técnicos que dependen del cliente y que, al resolverse, destraban el rendimiento del email.">
           <div style={grid(240)}>
             <div style={{ ...panel, borderLeft: `3px solid ${del.senderIsGmail ? C.gold : C.green}` }}>
