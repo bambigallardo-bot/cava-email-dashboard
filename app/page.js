@@ -337,6 +337,7 @@ export default function Page() {
   const sm = data?.sinceMonths;
   const automations = data?.automations || [];
   const popup = data?.popup;
+  const meta = data?.metaAds;
   const insights = useMemo(() => (data ? buildInsights(data) : []), [data]);
 
   const allCamps = data?.campaigns || [];
@@ -537,6 +538,26 @@ export default function Page() {
           </Section>
         );
       })()}
+
+      {/* META ADS: campaña de registros activa (adquisición del pop-up) */}
+      {meta && (
+        <Section title="📣 Meta Ads · Campaña de registros" subtitle="Resultados de la campaña activa que trae registros al pop-up (Meta Ads).">
+          <div style={{ ...panel, borderLeft: `3px solid ${C.wine}`, marginBottom: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{meta.campaign}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "rgba(91,191,138,0.15)", color: C.green, border: `1px solid ${C.green}` }}>{meta.status}</span>
+          </div>
+          <div style={grid(150)}>
+            <Card label="Inversión" value={fmtClp(meta.spend)} accent={C.gold} sub="CLP" />
+            <Card label={meta.resultLabel} value={fmt(meta.results)} accent={C.green} sub="resultado de la campaña" />
+            <Card label="Costo por resultado" value={fmtClp(meta.cpr)} accent={C.blue} sub="CLP" />
+            <Card label="Alcance" value={fmt(meta.reach)} sub="personas únicas" />
+            <Card label="Impresiones" value={fmt(meta.impressions)} />
+          </div>
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>
+            Datos de Meta Ads (cuenta CAVA ecomm), campaña activa. Se actualiza manualmente. Última actualización: {meta.updated}.
+          </div>
+        </Section>
+      )}
 
       {/* RESUMEN EJECUTIVO */}
       {insights.length > 0 && (
